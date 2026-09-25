@@ -1,0 +1,498 @@
+@import "tailwindcss";
+
+/* ============================================
+   FactLens & ZeBeyond Design System
+   "Engineering Platform & Verification Intelligence"
+   ============================================ */
+
+@theme {
+  /* ZeBeyond Color Tokens */
+  --color-zebeyond-bg: #080C0B;
+  --color-zebeyond-card: #0F1714;
+  --color-zebeyond-card-border: #1B2923;
+  --color-zebeyond-mint: #00E599;
+  --color-zebeyond-mint-glow: rgba(0, 229, 153, 0.25);
+  --color-zebeyond-mint-hover: #00F5A0;
+
+  /* Card & Layout Theme Colors */
+  --color-bg-card: #0F1714;
+  --color-bg-secondary: #141F1B;
+  --color-bg-tertiary: #1C2B25;
+  --color-border-color: rgba(0, 229, 153, 0.25);
+  --color-border-subtle: rgba(255, 255, 255, 0.1);
+  --color-text-primary: #F0F6F4;
+  --color-text-secondary: #9EB2A9;
+  --color-text-tertiary: #6E857C;
+
+  /* Legacy Tokens */
+  --color-primary: #172554;
+  --color-accent: #2563EB;
+  --color-verified: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+
+  --font-sans: 'Inter', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
+  --font-bengali: 'Noto Sans Bengali', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Global CSS Variables for Card Design System */
+:root {
+  --bg-main: #080C0B;
+  --bg-card: #0F1714;
+  --bg-secondary: #141F1B;
+  --bg-tertiary: #1B2B25;
+  --border-color: rgba(0, 229, 153, 0.25);
+  --border-color-subtle: rgba(255, 255, 255, 0.1);
+  --text-primary: #F0F6F4;
+  --text-secondary: #9EB2A9;
+  --text-tertiary: #6E857C;
+}
+
+/* Glass Card Design Token Utility */
+.glass-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 229, 153, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #080C0B;
+  color: #E2E8E5;
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ==========================================================================
+   HIGH-CONTRAST MINTY-SAGE GREENISH LIGHT THEME OVERRIDES (.light-theme)
+   Provides 100% visible, high-contrast light aesthetics across all components.
+   ========================================================================== */
+
+html.light-theme,
+body.light-theme {
+  background-color: #EBF3EF !important;
+  color: #06231A !important;
+}
+
+/* ── Global Typography High-Contrast ────────────────────────────────────── */
+.light-theme h1,
+.light-theme h2,
+.light-theme h3,
+.light-theme h4,
+.light-theme h5,
+.light-theme h6 {
+  color: #06231A !important;
+}
+
+.light-theme p,
+.light-theme span,
+.light-theme label,
+.light-theme td,
+.light-theme th,
+.light-theme li {
+  color: #1E3B30;
+}
+
+.light-theme strong,
+.light-theme b {
+  color: #06231A !important;
+}
+
+/* ── Sidebar & Navigation In Light Mode ──────────────────────────────────── */
+.light-theme aside {
+  background-color: #E2ECE7 !important;
+  border-right: 1px solid #C2DCD0 !important;
+  box-shadow: 4px 0 20px rgba(0, 168, 112, 0.08) !important;
+}
+
+.light-theme aside div[style*="6, 10, 9"],
+.light-theme aside div[style*="#060A09"] {
+  background-color: #D6E6DF !important;
+  border-bottom: 1px solid #C2DCD0 !important;
+}
+
+.light-theme aside a {
+  color: #1E3B30 !important;
+}
+
+/* Sidebar category headers (MAIN, ENGINES, RECORDS, SYSTEM) */
+.light-theme aside div[style*="monospace"] {
+  color: #007A50 !important;
+  font-weight: 800 !important;
+}
+
+/* Inactive nav item links in sidebar */
+.light-theme aside a:not([class*="active"]) {
+  color: #1E3B30 !important;
+}
+
+.light-theme aside a[style*="transparent"] {
+  color: #1E3B30 !important;
+}
+
+/* Active NavLink pill in sidebar */
+.light-theme aside a.active,
+.light-theme aside a[style*="0, 229, 153"],
+.light-theme aside a[style*="#00E599"] {
+  background: #00A870 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 0 16px rgba(0, 168, 112, 0.35) !important;
+}
+
+.light-theme aside a.active svg,
+.light-theme aside a.active span {
+  color: #FFFFFF !important;
+}
+
+/* Collapse button */
+.light-theme aside button[title="Collapse"],
+.light-theme aside button[title="Expand"] {
+  border-color: #C2DCD0 !important;
+  color: #007A50 !important;
+}
+
+/* ── Topbar / Header In Light Mode ───────────────────────────────────────── */
+.light-theme header,
+.light-theme nav {
+  background-color: rgba(226, 236, 231, 0.95) !important;
+  border-bottom: 1px solid #C2DCD0 !important;
+  color: #06231A !important;
+  box-shadow: 0 4px 20px rgba(0, 168, 112, 0.06) !important;
+}
+
+.light-theme header h2 {
+  color: #06231A !important;
+}
+
+.light-theme header span {
+  color: #2E4C40 !important;
+}
+
+.light-theme header div[style*="15, 23, 20"],
+.light-theme header div[style*="#0F1714"] {
+  background-color: #D6E6DF !important;
+  border-color: #C2DCD0 !important;
+  color: #06231A !important;
+}
+
+/* Language selector pills (বাংলা | EN) */
+.light-theme header button[style*="0, 229, 153"],
+.light-theme header button[style*="#00E599"] {
+  background-color: #00A870 !important;
+  color: #FFFFFF !important;
+}
+
+.light-theme header button[style*="transparent"] {
+  color: #2D4239 !important;
+}
+
+/* ── Container Cards, Hero Gradients & Footers In Light Mode ─────────── */
+.light-theme [style*="8, 12, 11"],
+.light-theme [style*="15, 23, 20"],
+.light-theme [style*="6, 10, 9"],
+.light-theme [style*="10, 15, 13"],
+.light-theme [style*="20, 31, 27"],
+.light-theme [style*="4, 7, 6"],
+.light-theme [style*="#080C0B"],
+.light-theme [style*="#060A09"],
+.light-theme [style*="#0A0F0D"],
+.light-theme [style*="#0F1714"],
+.light-theme [style*="#040706"],
+.light-theme [style*="#141F1B"],
+.light-theme [style*="linear-gradient"],
+.light-theme .bg-\[\#080C0B\],
+.light-theme .bg-\[\#060A09\],
+.light-theme .bg-\[\#0A0F0D\],
+.light-theme .bg-\[\#0F1714\],
+.light-theme .bg-\[\#0F172A\],
+.light-theme .bg-\[\#0B132B\],
+.light-theme .bg-\[\#0B1320\],
+.light-theme .bg-\[\#020617\],
+.light-theme .bg-slate-900,
+.light-theme .bg-slate-950,
+.light-theme .bg-slate-800,
+.light-theme .bg-zebeyond-card {
+  background: #FFFFFF !important;
+  background-image: none !important;
+  border-color: #C2DCD0 !important;
+  color: #06231A !important;
+  box-shadow: 0 4px 20px rgba(0, 168, 112, 0.06) !important;
+}
+
+/* Hero banners gradient override */
+.light-theme div[style*="linear-gradient"] {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F6F3 100%) !important;
+  border-color: #C2DCD0 !important;
+  color: #06231A !important;
+}
+
+/* Inner recessed sub-cards & box panels */
+.light-theme div[style*="6, 10, 9"],
+.light-theme div[style*="8, 12, 11"],
+.light-theme div[style*="10, 15, 13"],
+.light-theme div[style*="#060A09"],
+.light-theme div[style*="#080C0B"] {
+  background: #F0F6F3 !important;
+  background-image: none !important;
+  border-color: #C2DCD0 !important;
+}
+
+/* Footers in Light Mode */
+.light-theme footer,
+.light-theme [class*="footer"],
+.light-theme div[style*="#040706"],
+.light-theme div[style*="4, 7, 6"] {
+  background: #E2ECE7 !important;
+  background-image: none !important;
+  border-top: 1px solid #C2DCD0 !important;
+  color: #06231A !important;
+}
+
+.light-theme footer p,
+.light-theme footer span,
+.light-theme footer a {
+  color: #1E3B30 !important;
+}
+
+/* Borders in Light Mode */
+.light-theme [style*="27, 41, 35"],
+.light-theme [style*="#1B2923"] {
+  border-color: #C2DCD0 !important;
+}
+
+/* Text Overrides for Light Mode */
+.light-theme [style*="226, 232, 229"],
+.light-theme [style*="#E2E8E5"] {
+  color: #06231A;
+}
+
+.light-theme [style*="142, 158, 151"],
+.light-theme [style*="90, 110, 100"],
+.light-theme [style*="#8E9E97"],
+.light-theme [style*="#5A6E64"],
+.light-theme .text-\[\#8E9E97\],
+.light-theme .text-\[\#5A6E64\] {
+  color: #2E4C40;
+  font-weight: 600;
+}
+
+.light-theme [style*="0, 229, 153"],
+.light-theme [style*="#00E599"] {
+  color: #007A50;
+  font-weight: 800;
+}
+
+/* SVG icons text/fill color override */
+.light-theme svg[style*="255, 255, 255"],
+.light-theme svg[style*="#FFFFFF"] {
+  color: #06231A !important;
+}
+
+.light-theme svg[style*="142, 158, 151"],
+.light-theme svg[style*="#8E9E97"],
+.light-theme svg[style*="90, 110, 100"],
+.light-theme svg[style*="#5A6E64"] {
+  color: #2E4C40 !important;
+}
+
+/* ── Radar Scope & Threat Alert High-Contrast in Light Mode ───────────── */
+.light-theme div[style*="width: 180"][style*="height: 180"],
+.light-theme div[style*="width: 200"][style*="height: 200"] {
+  background-color: #E6F0EC !important;
+  border-color: #00A870 !important;
+  box-shadow: 0 0 30px rgba(0, 168, 112, 0.2) !important;
+}
+
+.light-theme div[style*="conic-gradient"] {
+  background: conic-gradient(from 0deg at 0% 100%, rgba(0, 168, 112, 0.45) 0deg, rgba(0, 168, 112, 0.12) 45deg, transparent 90deg) !important;
+  border-left-color: #00A870 !important;
+}
+
+.light-theme div[style*="dashed"] {
+  border-color: rgba(0, 122, 80, 0.35) !important;
+}
+
+/* Threat Risk Alert Boxes in Light Mode */
+.light-theme div[style*="239,68,68"],
+.light-theme div[style*="#EF4444"] {
+  background-color: #FEF2F2 !important;
+  border-color: #FCA5A5 !important;
+}
+
+.light-theme div[style*="239,68,68"] span,
+.light-theme div[style*="239,68,68"] p {
+  color: #991B1B !important;
+}
+
+.light-theme div[style*="245,158,11"],
+.light-theme div[style*="#F59E0B"] {
+  background-color: #FFFBEB !important;
+  border-color: #FDE68A !important;
+}
+
+.light-theme div[style*="245,158,11"] span,
+.light-theme div[style*="245,158,11"] p {
+  color: #92400E !important;
+}
+
+/* ── Primary Action Buttons & Pills In Light Mode ────────────────────────── */
+.light-theme button[style*="0, 229, 153"],
+.light-theme button[style*="#00E599"],
+.light-theme button[style*="63, 102, 241"],
+.light-theme button[style*="#6366F1"],
+.light-theme button[style*="#F97316"],
+.light-theme .btn-zebeyond-pill {
+  background: #00A870 !important;
+  background-image: none !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 15px rgba(0, 168, 112, 0.3) !important;
+}
+
+.light-theme button[style*="0, 229, 153"] *,
+.light-theme button[style*="#00E599"] *,
+.light-theme button[style*="#6366F1"] *,
+.light-theme .btn-zebeyond-pill * {
+  color: #FFFFFF !important;
+}
+
+/* Secondary & Disabled Buttons in Light Mode */
+.light-theme button[style*="27, 41, 35"],
+.light-theme button[style*="#1B2923"],
+.light-theme button[style*="6, 10, 9"],
+.light-theme button[style*="#060A09"],
+.light-theme button[disabled],
+.light-theme button:disabled {
+  background: #E0EDE6 !important;
+  background-image: none !important;
+  border: 1.5px solid #C2DCD0 !important;
+  color: #2E4C40 !important;
+  opacity: 0.85 !important;
+}
+
+.light-theme button[style*="0, 229, 153"] *,
+.light-theme button[style*="#00E599"] *,
+.light-theme .btn-zebeyond-pill * {
+  color: #FFFFFF !important;
+}
+
+/* ── Form Inputs & Textareas ────────────────────────────────────────────── */
+.light-theme input,
+.light-theme textarea,
+.light-theme select {
+  background-color: #FFFFFF !important;
+  border: 1.5px solid #C2DCD0 !important;
+  color: #06231A !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #4A685B !important;
+}
+
+/* ── Terminal / Console Viewports (e.g. Engine Console v2.4 & Laser HUD) ── */
+.light-theme div[style*="FactLens Engine Console"],
+.light-theme div[style*="SPECTRAL ELA SCANNER"] {
+  background-color: #0A0F0D !important;
+  color: #E2E8E5 !important;
+  border-color: #00A870 !important;
+}
+
+/* Utilities */
+.bg-zebeyond-dark {
+  background-color: #080C0B;
+}
+
+.bg-zebeyond-card {
+  background-color: #0F1714;
+  border: 1px solid #1B2923;
+}
+
+.bg-zebeyond-mint {
+  background-color: #00E599;
+  color: #040A07;
+}
+
+.text-zebeyond-mint {
+  color: #00E599;
+}
+
+.border-zebeyond-mint {
+  border-color: rgba(0, 229, 153, 0.3);
+}
+
+.glow-zebeyond-mint {
+  box-shadow: 0 0 30px rgba(0, 229, 153, 0.25);
+}
+
+.btn-zebeyond-pill {
+  background-color: #00E599;
+  color: #040A07;
+  font-weight: 800;
+  border-radius: 9999px;
+  padding: 0.75rem 1.75rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 25px rgba(0, 229, 153, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-zebeyond-pill:hover {
+  background-color: #00F5A0;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 35px rgba(0, 229, 153, 0.5);
+}
+
+.btn-zebeyond-outline {
+  background-color: rgba(15, 23, 20, 0.8);
+  color: #E2E8E5;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.75rem 1.75rem;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 229, 153, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.btn-zebeyond-outline:hover {
+  border-color: #00E599;
+  color: #00E599;
+  background-color: rgba(0, 229, 153, 0.08);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080C0B;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1B2923;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00E599;
+}
