@@ -1,0 +1,26 @@
+# FactLens Identity & Profile Service
+# Build context is the repository root so services/shared is reachable.
+
+# -- web layer
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+python-multipart>=0.0.20
+pyjwt>=2.10.0
+
+# -- persistence
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# -- password hashing (proposal: passwords hashed with bcrypt)
+bcrypt>=4.1.0
+
+# -- rate limiting
+redis>=5.0.0
+
+# -- avatar handling
+pillow>=10.0.0
+
+# -- shared library
+-e ./services/shared

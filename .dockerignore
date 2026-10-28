@@ -1,0 +1,84 @@
+# Git
+.git
+.gitignore
+
+# Local secrets and runtime state (never baked into an image)
+.env
+services/*/media/
+services/*/var/
+celerybeat-schedule*
+
+# Evaluation data and outputs, local Windows launchers
+data/
+evaluation/
+*.bat
+
+# =============================================================================
+# Model training
+# =============================================================================
+# The training/ directory is version-controlled with the application but
+# excluded from the deployment image. It is part of the project deliverable and
+# no part of the running system: the server loads exported ONNX artifacts only,
+# which is what keeps the deployment target a modest VPS.
+training/
+*.ipynb
+data/raw/
+data/processed/
+artifacts/
+
+# Large source checkpoints. The deployment image mounts models/ as a read-only
+# volume instead of baking weights in, so an image rebuild is not needed to
+# register a newly trained model.
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.traineddata
+
+# Project documents
+*.docx
+~$*
+*.pdf
+
+# Node & Frontend
+node_modules
+dist
+dist-ssr
+*.local
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing & Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Local databases & artifacts
+*.db
+*.sqlite3
+factlens.db
+.system_generated/
+.user_uploaded/
+media_*
+scratch/
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
