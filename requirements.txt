@@ -1,0 +1,13 @@
+# Installs every FactLens backend service into one environment, for local
+# development. Run from the repository root:
+#     py -m pip install -r requirements.txt
+# (setup_backend.bat does the same thing step by step.)
+#
+# Model training dependencies are separate: see training/requirements.txt.
+# They belong in a Kaggle/Colab GPU session, not on the application server.
+
+-e ./services/shared
+-r services/identity-service/requirements.txt
+-r services/rumour-service/requirements.txt
+-r services/scam-service/requirements.txt
+-r services/image-service/requirements.txt

@@ -1,0 +1,56 @@
+# FactLens Rumor Scanner Service
+# Build context is the repository root so services/shared is reachable.
+
+# -- web layer
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+python-multipart>=0.0.20
+pyjwt>=2.10.0
+
+# -- persistence
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# -- async processing (proposal: Celery with Redis as broker and result backend)
+celery>=5.4.0
+redis>=5.0.0
+
+# -- model serving: BanglaVerify v2 (PyTorch, CPU)
+# csebuetnlp/banglabert encoder + [CLS, mean] pooling + linear head, loaded
+# from models/banglaverify. The Dockerfile installs the CPU-only torch wheel
+# first; this line is then already satisfied.
+torch
+transformers>=4.40.0
+numpy>=1.26.0
+scipy>=1.11.0
+# The training notebook cleans every text with the csebuetnlp normalizer; the
+# model refuses to load without it, because un-normalized text shifts scores.
+normalizer @ https://github.com/csebuetnlp/normalizer/archive/refs/heads/main.zip
+
+# -- fuzzy inference (Mamdani FIS, centroid defuzzification)
+scikit-fuzzy>=0.5.0
+
+# -- evidence pipeline
+ddgs>=9.0.0
+duckduckgo-search>=8.0.0
+requests>=2.31.0
+trafilatura>=2.0.0
+beautifulsoup4>=4.12.0
+rapidfuzz>=3.9.0
+python-dateutil>=2.8.2
+
+# -- URL analysis
+tldextract>=5.0.0
+
+# -- OCR input layer (EasyOCR primary, Tesseract fallback)
+easyocr>=1.7.1
+pytesseract>=0.3.10
+pillow>=10.0.0
+
+# -- PDF dossier
+reportlab>=4.0.0
+
+# -- shared library
+-e ./services/shared

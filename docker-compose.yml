@@ -1,0 +1,371 @@
+# =============================================================================
+# FactLens — full stack
+# =============================================================================
+#   cp .env.example .env      # optional; every value below has a working default
+#   docker compose up --build
+#   open http://localhost
+#
+# Services
+#   factlens-postgres  one database, the proposal's unified schema
+#   factlens-redis     Celery broker + result backend, verdict cache, rate limits
+#   identity-service   :8001  auth, profiles (bcrypt)
+#   rumour-service     :8002  Rumor Scanner API        + rumour-worker
+#   scam-service       :8003  Scam Alert API           + scam-worker
+#   image-service      :8004  Image Check API          + image-worker (+ beat)
+#   api-gateway        :80    nginx, static frontend + reverse proxy
+#
+# Every analysis API writes a PENDING scan and returns a scan id; the matching
+# worker runs the pipeline. Nothing that takes seconds runs in a request thread.
+#
+# Model weights are NOT baked into images: ./models is mounted read-only.
+# All images build from the repository root so services/shared is reachable.
+# =============================================================================
+
+x-analysis-env: &analysis-env
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-factlens_admin}:${POSTGRES_PASSWORD:-factlens_dev_password}@factlens-postgres:5432/${POSTGRES_DB:-factlens_db}
+  REDIS_URL: redis://factlens-redis:6379/0
+  CELERY_BROKER_URL: redis://factlens-redis:6379/0
+  CELERY_RESULT_BACKEND: redis://factlens-redis:6379/1
+  MODEL_REGISTRY_PATH: /models/registry.json
+  JWT_SECRET: ${JWT_SECRET:-factlens-dev-jwt-secret-change-before-deploying}
+  JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+  URL_REPUTATION_ENDPOINT: ${URL_REPUTATION_ENDPOINT:-}
+  URL_REPUTATION_API_KEY: ${URL_REPUTATION_API_KEY:-}
+  EASYOCR_DOWNLOAD: ${EASYOCR_DOWNLOAD:-true}
+  EASYOCR_GPU: "false"
+  PYTHONUNBUFFERED: "1"
+
+x-banglaverify-env: &banglaverify-env
+  BANGLAVERIFY_MODEL_DIR: /models/banglaverify
+  BANGLAVERIFY_DEVICE: cpu
+  BANGLAVERIFY_TIMEOUT_SECONDS: ${BANGLAVERIFY_TIMEOUT_SECONDS:-10}
+  BANGLAVERIFY_NUM_THREADS: ${BANGLAVERIFY_NUM_THREADS:-}
+  BANGLAVERIFY_DECISIVE_CONFIDENCE: ${BANGLAVERIFY_DECISIVE_CONFIDENCE:-0.80}
+  BANGLAVERIFY_TEMPORAL_BAR_RAISE: ${BANGLAVERIFY_TEMPORAL_BAR_RAISE:-0.10}
+  RUMOR_TIME_LIMIT_S: ${RUMOR_TIME_LIMIT_S:-120}
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+x-scamnet-env: &scamnet-env
+  SCAMNET_MODEL_DIR: /models/scamnet
+  SCAMNET_DEVICE: cpu
+  # Ensemble members to load, ~2.3 GB RAM each on CPU.
+  SCAMNET_MAX_MODELS: ${SCAMNET_MAX_MODELS:-1}
+  SCAMNET_TIMEOUT_SECONDS: ${SCAMNET_TIMEOUT_SECONDS:-10}
+  SCAMNET_NUM_THREADS: ${SCAMNET_NUM_THREADS:-}
+  SCAM_TIME_LIMIT_S: ${SCAM_TIME_LIMIT_S:-60}
+  # The provider has the XLM-R-large config built in; don't wait on the Hub.
+  HF_HUB_OFFLINE: "1"
+  TRANSFORMERS_OFFLINE: "1"
+
+x-image-env: &image-env
+  IMAGE_TIME_LIMIT_S: ${IMAGE_TIME_LIMIT_S:-90}
+  IMAGE_RETENTION_HOURS: ${IMAGE_RETENTION_HOURS:-24}
+
+x-analysis-depends: &analysis-depends
+  factlens-postgres:
+    condition: service_healthy
+  factlens-redis:
+    condition: service_healthy
+
+x-worker-depends: &worker-depends
+  factlens-postgres:
+    condition: service_healthy
+  factlens-redis:
+    condition: service_healthy
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # 1. PostgreSQL — one database holds all persistent data
+  # ---------------------------------------------------------------------------
+  factlens-postgres:
+    image: postgres:16-alpine
+    container_name: factlens-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-factlens_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-factlens_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-factlens_db}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - factlens_pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 2. Redis — Celery broker and result backend, verdict cache, rate limiting
+  # ---------------------------------------------------------------------------
+  factlens-redis:
+    image: redis:7-alpine
+    container_name: factlens-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - factlens_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 3. Identity & Profile
+  # ---------------------------------------------------------------------------
+  identity-service:
+    build:
+      context: .
+      dockerfile: services/identity-service/Dockerfile
+    container_name: factlens-identity-service
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on: *analysis-depends
+    environment:
+      <<: *analysis-env
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+    ports:
+      - "127.0.0.1:${IDENTITY_HOST_PORT:-8001}:8001"
+    volumes:
+      - identity_media:/app/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 4. Rumor Scanner — API + worker
+  # ---------------------------------------------------------------------------
+  rumour-service:
+    build:
+      context: .
+      dockerfile: services/rumour-service/Dockerfile
+    container_name: factlens-rumour-service
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on: *analysis-depends
+    environment:
+      <<: [*analysis-env, *banglaverify-env]
+    ports:
+      - "127.0.0.1:${RUMOUR_HOST_PORT:-8002}:8002"
+    volumes:
+      - ./models:/models:ro
+      - easyocr_models:/root/.EasyOCR
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks: [factlens-network]
+
+  rumour-worker:
+    build:
+      context: .
+      dockerfile: services/rumour-service/Dockerfile
+    container_name: factlens-rumour-worker
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on:
+      <<: *worker-depends
+      rumour-service:
+        condition: service_started
+    environment:
+      <<: [*analysis-env, *banglaverify-env]
+    volumes:
+      - ./models:/models:ro
+      - easyocr_models:/root/.EasyOCR
+    # Every worker process loads its own BanglaVerify copy (~1 GB RAM each),
+    # so concurrency is bounded by RAM, not by CPU count.
+    command: >
+      celery -A src.workers.tasks.celery_app worker
+      --loglevel=info --queues=rumor --concurrency=${RUMOUR_WORKER_CONCURRENCY:-2} --hostname=rumor@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.workers.tasks.celery_app inspect ping -d rumor@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 90s
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 5. Scam Alert — API + worker
+  # ---------------------------------------------------------------------------
+  scam-service:
+    build:
+      context: .
+      dockerfile: services/scam-service/Dockerfile
+    container_name: factlens-scam-service
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on: *analysis-depends
+    environment:
+      <<: [*analysis-env, *scamnet-env]
+    ports:
+      - "127.0.0.1:${SCAM_HOST_PORT:-8003}:8003"
+    volumes:
+      - ./models:/models:ro
+      - easyocr_models:/root/.EasyOCR
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks: [factlens-network]
+
+  scam-worker:
+    build:
+      context: .
+      dockerfile: services/scam-service/Dockerfile
+    container_name: factlens-scam-worker
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on:
+      <<: *worker-depends
+      scam-service:
+        condition: service_started
+    environment:
+      <<: [*analysis-env, *scamnet-env]
+    volumes:
+      - ./models:/models:ro
+      - easyocr_models:/root/.EasyOCR
+    # One process, one ScamNet-BN copy (~2.3 GB).
+    command: >
+      celery -A src.workers.tasks.celery_app worker
+      --loglevel=info --queues=scam --concurrency=1 --hostname=scam@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.workers.tasks.celery_app inspect ping -d scam@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 6. Image Check — API + worker + beat (retention sweep)
+  # ---------------------------------------------------------------------------
+  image-service:
+    build:
+      context: .
+      dockerfile: services/image-service/Dockerfile
+    container_name: factlens-image-service
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on: *analysis-depends
+    environment:
+      <<: [*analysis-env, *image-env]
+    ports:
+      - "127.0.0.1:${IMAGE_HOST_PORT:-8004}:8004"
+    volumes:
+      - ./models:/models:ro
+      # Uploads are shared with the worker but never served by the web layer.
+      - image_uploads:/app/var/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [factlens-network]
+
+  image-worker:
+    build:
+      context: .
+      dockerfile: services/image-service/Dockerfile
+    container_name: factlens-image-worker
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    depends_on:
+      <<: *worker-depends
+      image-service:
+        condition: service_started
+    environment:
+      <<: [*analysis-env, *image-env]
+    volumes:
+      - ./models:/models:ro
+      - image_uploads:/app/var/uploads
+    # -B runs the embedded beat scheduler for the hourly retention sweep.
+    # Safe only because this is a single worker container; scaling it out
+    # means moving beat into its own service.
+    command: >
+      celery -A src.workers.tasks.celery_app worker -B
+      --loglevel=info --queues=image --concurrency=1 --hostname=image@%h
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.workers.tasks.celery_app inspect ping -d image@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    networks: [factlens-network]
+
+  # ---------------------------------------------------------------------------
+  # 7. API gateway & static frontend
+  # ---------------------------------------------------------------------------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    container_name: factlens-api-gateway
+    restart: unless-stopped
+    depends_on:
+      - identity-service
+      - rumour-service
+      - scam-service
+      - image-service
+    ports:
+      - "${FACTLENS_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    networks: [factlens-network]
+
+volumes:
+  factlens_pgdata:
+    name: factlens_pgdata
+  factlens_redisdata:
+    name: factlens_redisdata
+  identity_media:
+    name: factlens_identity_media
+  image_uploads:
+    name: factlens_image_uploads
+  easyocr_models:
+    name: factlens_easyocr_models
+
+networks:
+  factlens-network:
+    name: factlens-network
+    driver: bridge
