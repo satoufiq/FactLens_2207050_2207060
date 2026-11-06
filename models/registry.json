@@ -1,0 +1,388 @@
+{
+  "$comment": [
+    "FactLens model registry -- the manifest described in the proposal's",
+    "'Versioning and the model registry' section. It is loaded at application",
+    "start and the active version is written into every model_runs row.",
+    "",
+    "HOW TO ACTIVATE A MODEL",
+    "-----------------------",
+    "1. Train and evaluate in training/, then export to ONNX.",
+    "2. Copy the .onnx file and its tokenizer directory under models/.",
+    "3. Fill in 'artifact', 'version', 'metrics', 'decision_threshold' and",
+    "   'exported_at' in that model's entry below, and set 'registered': true.",
+    "4. Restart the service, or POST /api/v1/admin/registry/reload.",
+    "",
+    "An entry whose 'artifact' is null -- or whose artifact file is missing --",
+    "makes its provider report unavailable. The owning module then runs on its",
+    "non-ML signals and marks the scan PARTIAL. That is the designed degraded",
+    "mode, not a failure, and it is what all three models are in right now.",
+    "",
+    "A model is only accepted for integration when its external-set Macro F1",
+    "is within the declared margin of its in-distribution score (see",
+    "acceptance_policy below). Record both numbers in 'metrics'."
+  ],
+  "registry_version": "1.0.0",
+  "updated_at": "2026-11-13",
+  "acceptance_policy": {
+    "max_external_macro_f1_drop": 0.1,
+    "note": "A model scoring 0.95 in-distribution and 0.60 externally is overfitted to its corpus and is not shipped, regardless of how good the first number looks. The margin is declared here so the Phase 2 gate is checkable rather than rhetorical."
+  },
+  "models": [
+    {
+      "name": "BanglaVerify",
+      "registered": true,
+      "version": "banglaverify-v2-1x-6da2789a",
+      "model_runs_name": "BanglaVerify",
+      "task": "Binary classification -- Fake (0) / Real (1); short mode (<= 60 words, single text) or full mode (headline + article pair)",
+      "base_architecture": "csebuetnlp/banglabert (ELECTRA-base) + [CLS, masked-mean] pooling + LayerNorm(1536) + Linear(1536, 2)",
+      "artifact": "banglaverify/banglaverify_v2_config.json",
+      "artifact_format": "pytorch",
+      "serving": "PyTorch, CPU (services/rumour-service/src/providers). Not served through the shared ONNX providers.",
+      "tokenizer": "banglaverify/tokenizer",
+      "weights": [
+        "banglaverify/banglaverify_v2_seed42.pt"
+      ],
+      "labels": [
+        "FAKE",
+        "REAL"
+      ],
+      "max_sequence_length": {
+        "full": 384,
+        "short": 128
+      },
+      "decision_threshold": {
+        "full": 0.65,
+        "short": 0.48500000000000004,
+        "temperature": {
+          "full": 0.9511584639549255,
+          "short": 1.0909888744354248
+        },
+        "source": "banglaverify_v2_config.json (read at load; never hard-coded)"
+      },
+      "load_policy": "resident",
+      "training_dataset": "BanFakeNews-2.0 and related Bangla fake-news corpora (group split by article)",
+      "training_commit": null,
+      "exported_at": null,
+      "metrics": {
+        "in_distribution": {
+          "full": {
+            "n": 5756,
+            "threshold": 0.65,
+            "accuracy": 0.9527449617790132,
+            "macro_f1": 0.9102786394173594,
+            "fake_precision": 0.9465838509316771,
+            "fake_recall": 0.768920282542886,
+            "fake_f1": 0.8485523385300668,
+            "mcc": 0.8271382782458606,
+            "auc_roc": 0.9610836457816043,
+            "ece": 0.004239151716397984
+          },
+          "headline": {
+            "n": 5450,
+            "threshold": 0.48500000000000004,
+            "accuracy": 0.950091743119266,
+            "macro_f1": 0.8946289779977572,
+            "fake_precision": 0.966824644549763,
+            "fake_recall": 0.709154113557358,
+            "fake_f1": 0.8181818181818182,
+            "mcc": 0.8028000844759989,
+            "auc_roc": 0.930232954687551,
+            "ece": 0.007425235444252592
+          },
+          "ocr": {
+            "n": 5756,
+            "threshold": 0.48500000000000004,
+            "accuracy": 0.9409312022237665,
+            "macro_f1": 0.8832413960153733,
+            "fake_precision": 0.952712100139082,
+            "fake_recall": 0.6912209889001009,
+            "fake_f1": 0.8011695906432749,
+            "mcc": 0.78113900610225,
+            "auc_roc": 0.9283625028191816,
+            "ece": 0.010157198283388968
+          }
+        },
+        "external": {
+          "dataset": "BanglaFakeNews_Benchmark_v0.1.csv",
+          "evaluated_at": "2026-11-13",
+          "note": "3987 rows (1994 fake / 1993 real), not used in training. full = headline + article pair; headline = headline alone (short mode); text = the 'text' column pasted as one input, the website's path.",
+          "full": {
+            "n": 3987,
+            "accuracy": 0.8623024830699775,
+            "macro_f1": 0.8622669931103387,
+            "fake_precision": 0.8512396694214877,
+            "fake_recall": 0.8781344032096289,
+            "real_recall": 0.8464626191670848,
+            "auc_roc": 0.9304208410479808,
+            "ece": 0.08508174065713567
+          },
+          "headline": {
+            "n": 3987,
+            "accuracy": 0.6746927514421871,
+            "macro_f1": 0.6434623993253065,
+            "fake_precision": 0.9286592865928659,
+            "fake_recall": 0.3786359077231695,
+            "real_recall": 0.9708981435022579,
+            "auc_roc": 0.8133600500447655,
+            "ece": 0.25705746175068966
+          },
+          "text": {
+            "n": 3987,
+            "accuracy": 0.8703285678454978,
+            "macro_f1": 0.8702501768003341,
+            "fake_precision": 0.8531802965088474,
+            "fake_recall": 0.8946840521564694,
+            "real_recall": 0.845960863020572,
+            "auc_roc": 0.9318703727841829,
+            "ece": 0.08435392525708557
+          },
+          "accuracy": 0.8623024830699775,
+          "macro_f1": 0.8622669931103387,
+          "fake_class_recall": 0.8781344032096289,
+          "known_weaknesses": [
+            "Headline alone: macro F1 0.64, fake recall 0.38 -- short claims are often called real; the evidence pipeline must carry them.",
+            "Clickbait fakes (n=28): recall 0.21 in every view."
+          ]
+        },
+        "headline_head": {
+          "word_threshold": 60,
+          "macro_f1": 0.8946289779977572,
+          "note": "Texts of 60 words or fewer, or with no article body, run in short mode at the short threshold."
+        },
+        "acceptance": {
+          "macro_f1_drop": 0.048011646307020706,
+          "max_allowed": 0.1,
+          "passed": true
+        }
+      },
+      "notes": "Integrated 2026-11-13. src/providers/banglaverify_model.py copies the training notebook's cleaning, encoding and model code; one weight file (seed 42). The verdict is still decided by evidence first: the model only chooses between Unverified and Unverified - suspicious pattern when evidence is thin."
+    },
+    {
+      "name": "ScamNet-BN",
+      "registered": true,
+      "version": "scamnet-bn-13604eb3",
+      "model_runs_name": "scamnet-bn",
+      "task": "Three-class classification -- normal / promo / smish; risk High / Medium / Low from smish probability",
+      "base_architecture": "FacebookAI/xlm-roberta-large encoder + character CNN + 18 structural features, gated fusion; 3-seed ensemble",
+      "artifact": "scamnet/scamnet_config.json",
+      "artifact_format": "pytorch",
+      "serving": "PyTorch, CPU (services/scam-service). Not served through the shared ONNX providers.",
+      "tokenizer": "scamnet/scamnet_tokenizer",
+      "weights": [
+        "scamnet/scamnet_seed42.pt",
+        "scamnet/scamnet_seed7.pt",
+        "scamnet/scamnet_seed2024.pt"
+      ],
+      "labels": [
+        "normal",
+        "promo",
+        "smish"
+      ],
+      "max_sequence_length": 128,
+      "decision_threshold": {
+        "high": 0.91,
+        "medium": 0.5,
+        "temperature": 0.6866220235824585,
+        "source": "scamnet_config.json (read at load; never hard-coded)"
+      },
+      "load_policy": "resident",
+      "training_dataset": "6740 training messages (SmishBD, Bangalabarta; Bengali, English, Banglish, code-mixed)",
+      "training_commit": null,
+      "exported_at": null,
+      "metrics": {
+        "in_distribution": {
+          "n": 1506,
+          "accuracy": 0.9913678618857902,
+          "macro_f1": 0.9906325933431943,
+          "smish_precision": 0.9865996649916248,
+          "smish_recall": 0.9949324324324325,
+          "smish_f1": 0.990748528174937,
+          "smish_ap": 0.9996332979786997,
+          "smish_flagged_high_or_medium": 0.9881756756756757,
+          "benign_flagged_high": 0.00437636761487965
+        },
+        "breakdown": [
+          {
+            "group": "source=bangalabarta",
+            "n": 133,
+            "macro_f1": 0.9750036466828446,
+            "smish_recall": 0.9795918367346939,
+            "benign_to_smish": 0.011904761904761904
+          },
+          {
+            "group": "source=smishbd",
+            "n": 1373,
+            "macro_f1": 0.9920897916928614,
+            "smish_recall": 0.996316758747698,
+            "benign_to_smish": 0.008433734939759036
+          },
+          {
+            "group": "variety=Banglish",
+            "n": 358,
+            "macro_f1": 0.9969220176983983,
+            "smish_recall": 1.0,
+            "benign_to_smish": 0.0045662100456621
+          },
+          {
+            "group": "variety=Bengali",
+            "n": 450,
+            "macro_f1": 0.9847702217267434,
+            "smish_recall": 0.9883720930232558,
+            "benign_to_smish": 0.01079136690647482
+          },
+          {
+            "group": "variety=Code-Mixed",
+            "n": 23,
+            "macro_f1": 1.0,
+            "smish_recall": 1.0,
+            "benign_to_smish": 0.0
+          },
+          {
+            "group": "variety=CodeMix",
+            "n": 331,
+            "macro_f1": 0.9870334914393429,
+            "smish_recall": 0.9925925925925926,
+            "benign_to_smish": 0.01020408163265306
+          },
+          {
+            "group": "variety=English",
+            "n": 344,
+            "macro_f1": 0.9936803498377769,
+            "smish_recall": 1.0,
+            "benign_to_smish": 0.009708737864077669
+          }
+        ],
+        "robustness": [
+          {
+            "attack": "homoglyph",
+            "defence": "on",
+            "macro_f1": 0.9906325933431943,
+            "smish_recall": 0.9949324324324325
+          },
+          {
+            "attack": "homoglyph",
+            "defence": "off",
+            "macro_f1": 0.9697056589449399,
+            "smish_recall": 0.9695945945945946
+          },
+          {
+            "attack": "invisible",
+            "defence": "on",
+            "macro_f1": 0.9906325933431943,
+            "smish_recall": 0.9949324324324325
+          },
+          {
+            "attack": "invisible",
+            "defence": "off",
+            "macro_f1": 0.986467772058765,
+            "smish_recall": 0.9932432432432432
+          },
+          {
+            "attack": "spacing",
+            "defence": "on",
+            "macro_f1": 0.98687005909918,
+            "smish_recall": 0.9915540540540541
+          },
+          {
+            "attack": "char_ops",
+            "defence": "on",
+            "macro_f1": 0.9898863680450775,
+            "smish_recall": 0.9949324324324325
+          },
+          {
+            "attack": "leetspeak",
+            "defence": "on",
+            "macro_f1": 0.9767438778619918,
+            "smish_recall": 0.9915540540540541
+          },
+          {
+            "attack": "code_switch",
+            "defence": "on",
+            "macro_f1": 0.9900506637802375,
+            "smish_recall": 0.9949324324324325
+          },
+          {
+            "attack": "punct_emoji",
+            "defence": "on",
+            "macro_f1": 0.9884027829212773,
+            "smish_recall": 0.9932432432432432
+          },
+          {
+            "attack": "combined",
+            "defence": "on",
+            "macro_f1": 0.9811836692991559,
+            "smish_recall": 0.9932432432432432
+          },
+          {
+            "attack": "combined",
+            "defence": "off",
+            "macro_f1": 0.9720100571078288,
+            "smish_recall": 0.9881756756756757
+          }
+        ],
+        "external": null,
+        "acceptance": {
+          "passed": null,
+          "reason": "Not evaluated against the acceptance gate: no external-set evaluation was supplied with this model. The per-source and per-variety breakdowns above are splits of the same test set, not an external set."
+        }
+      },
+      "notes": "Integrated 2026-11-13. The provider (services/scam-service/src/providers/scam_model_provider.py) is a verbatim copy of the training notebook's preprocessing and model code. The proposal's ScamNet-BN spec (mDeBERTa-v3-base, ONNX, Legitimate/Suspicious/Scam) describes a different model from this one."
+    },
+    {
+      "name": "ImageAuth",
+      "registered": false,
+      "version": "0.0.0-unregistered",
+      "task": "Binary classification -- Authentic / AI-generated, with a separate manipulation head",
+      "base_architecture": "google/vit-base-patch16-224",
+      "artifact": null,
+      "artifact_format": "onnx",
+      "tokenizer": null,
+      "labels": [
+        "AUTHENTIC",
+        "AI_GENERATED"
+      ],
+      "max_sequence_length": null,
+      "decision_threshold": null,
+      "load_policy": "on_demand",
+      "idle_release_s": 300,
+      "training_dataset": "Public real-image corpora paired with generated images from several model families",
+      "training_commit": null,
+      "exported_at": null,
+      "metrics": {
+        "in_distribution": {
+          "auc_roc": null,
+          "accuracy": null
+        },
+        "external": {
+          "held_out_generator": null,
+          "held_out_generator_auc": null,
+          "held_out_generator_accuracy": null
+        },
+        "note": "User-facing confidence is derived from the out-of-distribution figure, not the in-distribution one. A detector trained on one generator family often scores above 95% in-distribution and near chance on a generator it has never seen."
+      },
+      "notes": "Awaiting the trained artifact. Until it is registered, Image Check runs on EXIF metadata plus the noise, compression and frequency-domain signals, and every image scan is marked PARTIAL."
+    }
+  ],
+  "pretrained_components": {
+    "$comment": "Not trained by the team and deliberately outside the registry, but recorded here so the proposal's claim about which components are pretrained stays honest and auditable.",
+    "ocr": {
+      "engine": "EasyOCR",
+      "languages": [
+        "bn",
+        "en"
+      ],
+      "fallback": "Tesseract ben+eng",
+      "rationale": "OCR is a solved, well-served problem; training a Bangla text recognizer would consume the project's entire budget while producing something worse than what exists."
+    },
+    "semantic_relevance": {
+      "status": "not yet integrated",
+      "planned": "multilingual sentence-embedding model",
+      "current_implementation": "deterministic lexical and fuzzy matching"
+    },
+    "nli": {
+      "status": "not yet integrated",
+      "planned": "multilingual NLI model for supporting / contradicting / neutral labelling",
+      "current_implementation": "deterministic cue-based stance matcher"
+    }
+  }
+}
