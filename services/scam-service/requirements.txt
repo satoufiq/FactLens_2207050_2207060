@@ -1,0 +1,43 @@
+# FactLens Scam Alert Service
+# Build context is the repository root so services/shared is reachable.
+
+# -- web layer
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+python-multipart>=0.0.20
+pyjwt>=2.10.0
+
+# -- persistence
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# -- async processing (proposal: Celery with Redis as broker and result backend)
+celery>=5.4.0
+redis>=5.0.0
+
+# -- ScamNet-BN (PyTorch; XLM-RoBERTa-large + char-CNN + structural features)
+# The Dockerfile installs the CPU-only torch wheel first; this line is then
+# already satisfied. transformers must not be pinned below 4.56.
+torch
+transformers>=4.56
+sentencepiece
+numpy>=1.26.0
+
+# -- (rule engine removed 2026-11-13; pyyaml no longer needed)
+
+# -- URL analysis
+requests>=2.31.0
+tldextract>=5.0.0
+
+# -- OCR input layer (EasyOCR primary, Tesseract fallback)
+easyocr>=1.7.1
+pytesseract>=0.3.10
+pillow>=10.0.0
+
+# -- tests
+pytest>=8.0.0
+
+# -- shared library
+-e ./services/shared
