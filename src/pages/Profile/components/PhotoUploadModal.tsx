@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Upload, X } from 'lucide-react';
+import { uploadAvatarApi } from '@/services/api';
 
 interface PhotoUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadSuccess: (msg: string) => void;
+  onUploadSuccess: (msg: string, avatarUrl?: string) => void;
   isBn?: boolean;
 }
+
+const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_BYTES = 5 * 1024 * 1024;
 
 export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   isOpen,
@@ -16,10 +20,31 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   isBn
 }) => {
   const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSimulatedUpload = () => {
-    onUploadSuccess(isBn ? 'প্রোফাইল ছবি সফলভাবে আপডেট করা হয়েছে' : 'Profile photo updated successfully.');
-    onClose();
+  /** Upload the chosen file to the identity service. */
+  const handleFile = async (file?: File | null) => {
+    if (!file) return;
+    if (!ACCEPTED.includes(file.type)) {
+      setError(isBn ? 'শুধু PNG, JPG বা WebP ছবি।' : 'Only PNG, JPG or WebP images.');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setError(isBn ? 'ছবিটি ৫ MB-এর বেশি।' : 'The image is larger than 5 MB.');
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    const res = await uploadAvatarApi(file);
+    setUploading(false);
+    if (res?.avatar_url) {
+      onUploadSuccess(isBn ? 'প্রোফাইল ছবি সফলভাবে আপডেট করা হয়েছে' : 'Profile photo updated successfully.', res.avatar_url);
+      onClose();
+    } else {
+      setError(isBn ? 'ছবি আপলোড করা যায়নি।' : 'The photo could not be uploaded.');
+    }
   };
 
   return (
@@ -50,8 +75,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
             <div
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
               onDragLeave={() => setDragActive(false)}
-              onDrop={(e) => { e.preventDefault(); setDragActive(false); handleSimulatedUpload(); }}
-              onClick={handleSimulatedUpload}
+              onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files?.[0]); }}
+              onClick={() => !uploading && inputRef.current?.click()}
               className={`p-8 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all space-y-3 ${
                 dragActive
                   ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/40'
@@ -66,10 +91,18 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                   {isBn ? 'ছবি ড্র্যাগ করুন অথবা ক্লিক করে সিলেক্ট করুন' : 'Click to select or drag photo here'}
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  PNG, JPG, WebP (Max 5MB)
+                  {uploading ? (isBn ? 'আপলোড হচ্ছে…' : 'Uploading…') : 'PNG, JPG, WebP (Max 5MB)'}
                 </p>
               </div>
+              <input
+                ref={inputRef}
+                type="file"
+                accept={ACCEPTED.join(',')}
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
             </div>
+            {error && <p className="text-xs font-semibold text-red-500">{error}</p>}
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button

@@ -23,7 +23,7 @@ const PIPELINE_STEPS = [
   },
   {
     num: '02',
-    title: 'BangaBERT NLP Stance Analysis',
+    title: 'BanglaBERT NLP Stance Analysis',
     titleBn: 'নিউরাল টেক্সট স্ট্যান্স অ্যানালাইসিস',
     desc: 'Runs specialized transformer NLP models trained on Bengali gazettes and news corpora.',
     color: '#00D2C2',
@@ -154,7 +154,7 @@ export default function HowItWorks() {
             </p>
 
             <p style={{ fontSize: 15, color: '#8E9E97', lineHeight: 1.6, maxWidth: 640, margin: 0 }}>
-              FactLens ingests Bengali text claims, screenshot news images, and URLs; processes them through BangaBERT NLP and forensic engines; and cross-references official gazette archives.
+              FactLens ingests Bengali text claims, screenshot news images, and URLs; processes them through BanglaBERT NLP and forensic engines; and cross-references official gazette archives.
             </p>
           </div>
 

@@ -23,8 +23,8 @@ const DOC_SECTIONS = [
     icon: <Terminal size={16} />,
   },
   {
-    id: 'bangabert-spec',
-    label: 'BangaBERT NLP Specs',
+    id: 'banglabert-spec',
+    label: 'BanglaBERT NLP Specs',
     icon: <Cpu size={16} />,
   },
   {
@@ -218,7 +218,7 @@ export default function TechSpecHelp() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
-                    { step: '01', title: 'Multilingual NLP & Bengali Tokenization', desc: 'Claims are processed through BangaBERT fine-tuned on local Bangladeshi news syntax, dialect variations, and social media transliteration.' },
+                    { step: '01', title: 'Multilingual NLP & Bengali Tokenization', desc: 'Claims are processed through BanglaBERT fine-tuned on local Bangladeshi news syntax, dialect variations, and social media transliteration.' },
                     { step: '02', title: 'Fact Database & Gazette RAG Retrieval', desc: 'Retrieves verified gazettes from Bangladesh Press Information Department (PID), university registrar portals, and official ministry circulars.' },
                     { step: '03', title: 'Multimodal Deepfake Forensic Inspection', desc: 'Analyzes pixel noise distribution using Error Level Analysis (ELA), EXIF camera metadata, and GAN facial landmark alignment.' },
                     { step: '04', title: 'Explainable AI & Bengali Verdict Reports', desc: 'Generates evidence-backed side-by-side claim vs reality comparisons with plain Bengali explanations and PDF link citations.' },
@@ -299,10 +299,10 @@ export default function TechSpecHelp() {
               </motion.div>
             )}
 
-            {/* TAB 3: BANGABERT NLP SPECS */}
-            {activeTab === 'bangabert-spec' && (
+            {/* TAB 3: BANGLABERT NLP SPECS */}
+            {activeTab === 'banglabert-spec' && (
               <motion.div
-                key="bangabert-spec"
+                key="banglabert-spec"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
@@ -310,11 +310,11 @@ export default function TechSpecHelp() {
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, borderBottom: '1px solid #1B2923', paddingBottom: 16 }}>
                   <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#00E599', fontWeight: 700 }}>SECTION 03</span>
-                  <h2 style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF', margin: 0 }}>BangaBERT NLP Specifications</h2>
+                  <h2 style={{ fontSize: 22, fontWeight: 900, color: '#FFFFFF', margin: 0 }}>BanglaBERT NLP Specifications</h2>
                 </div>
 
                 <p style={{ fontSize: 14, color: '#E2E8E5', lineHeight: 1.6, margin: 0 }}>
-                  BangaBERT is a BERT-based transformer model fine-tuned on 120,000 Bangladeshi news headlines, rumor threads, and government gazette circulars.
+                  BanglaBERT is an Electra/BERT-based transformer model calibrated for Bangladeshi news headlines, rumor threads, and government gazette circulars.
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -382,7 +382,7 @@ export default function TechSpecHelp() {
                   {[
                     { q: 'What does an "Unverified" result status mean?', a: 'Unverified means evidence in gazette databases was insufficient to make a definitive ruling — not that the claim is automatically false. Transparency is our core principle.' },
                     { q: 'How does FactLens detect Photoshop newspaper edits?', a: 'Error Level Analysis (ELA) isolates JPEG re-compression gradients. Text overlays inserted via Photoshop display conflicting compression noise levels.' },
-                    { q: 'Can I verify claims written in Banglish or local dialects?', a: 'Yes. BangaBERT contains tokenizers trained on social media Banglish transliterations and local Bengali dialects.' },
+                    { q: 'Can I verify claims written in Banglish or local dialects?', a: 'Yes. BanglaBERT contains tokenizers trained on social media Banglish transliterations and local Bengali dialects.' },
                   ].map((faq, idx) => (
                     <div key={idx} style={{ padding: 18, background: '#080C0B', borderRadius: 16, border: '1px solid #1B2923', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <h4 style={{ fontSize: 14, fontWeight: 800, color: '#FFFFFF', margin: 0 }}>{faq.q}</h4>

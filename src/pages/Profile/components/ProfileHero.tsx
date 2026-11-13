@@ -45,6 +45,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center gap-6">
           <ProfileAvatar
             initials={user.initials}
+            avatarUrl={user.avatarUrl}
             statusText={user.status}
             onOpenUpload={onOpenUploadPhoto}
             isBn={isBn}

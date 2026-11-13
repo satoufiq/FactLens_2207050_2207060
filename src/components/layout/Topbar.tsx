@@ -1,17 +1,35 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, User, LogOut, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Topbar() {
   const { lang, setLang, t } = useLanguage();
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
   const isLight = theme === 'light';
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    setUserMenuOpen(false);
+    await logout();
+    navigate('/login');
+  };
+
+  const getInitials = () => {
+    if (!user?.full_name) return 'FL';
+    const parts = user.full_name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const roleLabel = user?.role ? user.role.replace('ROLE_', '') : 'ANALYST';
 
   // Page title mapping
   const getPageTitle = () => {
@@ -170,25 +188,46 @@ export default function Topbar() {
             }}
           >
             <div style={{ width: 32, height: 32, borderRadius: 99, background: 'linear-gradient(135deg, #00E599, #00D2C2)', color: '#000', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
-              TA
+              {getInitials()}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }} className="hidden sm:flex">
-              <span style={{ fontSize: 12, fontWeight: 800, color: isLight ? '#06231A' : '#FFFFFF', lineHeight: 1.1 }}>Tanvir Ahmed</span>
-              <span style={{ fontSize: 9, fontFamily: 'monospace', color: isLight ? '#007A50' : '#00E599', fontWeight: 700 }}>RESEARCHER</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: isLight ? '#06231A' : '#FFFFFF', lineHeight: 1.1 }}>{user?.full_name || 'FactLens Analyst'}</span>
+              <span style={{ fontSize: 9, fontFamily: 'monospace', color: isLight ? '#007A50' : '#00E599', fontWeight: 700 }}>{roleLabel}</span>
             </div>
           </button>
 
           {userMenuOpen && (
             <div style={{ position: 'absolute', right: 0, top: 52, width: 220, background: isLight ? '#FFFFFF' : '#0F1714', borderRadius: 20, border: `1px solid ${isLight ? '#B8D9CB' : 'rgba(0, 229, 153, 0.3)'}`, boxShadow: '0 10px 40px rgba(0,0,0,0.3)', padding: 12, zIndex: 50, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ padding: '8px 10px', borderBottom: `1px solid ${isLight ? '#B8D9CB' : '#1B2923'}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: isLight ? '#06231A' : '#FFFFFF' }}>{user?.full_name || 'Analyst'}</span>
+                <span style={{ fontSize: 10, fontFamily: 'monospace', color: isLight ? '#5A6E64' : '#8E9E97', wordBreak: 'break-all' }}>{user?.email || 'analyst@factlens.gov.bd'}</span>
+              </div>
               <Link to="/app/profile" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, textDecoration: 'none', color: isLight ? '#06231A' : '#FFFFFF', fontSize: 13, fontWeight: 700 }}>
                 <User size={16} style={{ color: isLight ? '#007A50' : '#00E599' }} /> User Profile
               </Link>
               <Link to="/app/settings" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, textDecoration: 'none', color: isLight ? '#06231A' : '#FFFFFF', fontSize: 13, fontWeight: 700 }}>
                 <User size={16} style={{ color: isLight ? '#007A50' : '#00E599' }} /> Platform Settings
               </Link>
-              <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, textDecoration: 'none', color: '#F87171', fontSize: 13, fontWeight: 700 }}>
+              <button
+                onClick={handleSignOut}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: 10,
+                  borderRadius: 10,
+                  background: 'none',
+                  border: 'none',
+                  color: '#F87171',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left',
+                }}
+              >
                 <LogOut size={16} /> Sign Out
-              </Link>
+              </button>
             </div>
           )}
         </div>

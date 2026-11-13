@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Globe, Save, Check, Bell, Moon, Sun, Cpu } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 interface ToggleProps {
   checked: boolean;
@@ -47,6 +48,7 @@ function Toggle({ checked, onChange, color = '#00E599' }: ToggleProps) {
 export default function Settings() {
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   const [saved, setSaved] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -59,6 +61,12 @@ export default function Settings() {
   };
 
   const isDarkMode = theme === 'dark';
+
+  const userInitials = user?.full_name
+    ? user.full_name.trim().split(/\s+/).map((p: string) => p[0]).join('').substring(0, 2).toUpperCase()
+    : 'SA';
+  const userName = user?.full_name || 'Shahriar Abdullah';
+  const userRole = user?.role ? user.role.replace('ROLE_', '') : 'ANALYST';
 
   return (
     <motion.div
@@ -251,7 +259,7 @@ export default function Settings() {
               {[
                 { icon: <Bell size={14} />, label: t('পুশ নোটিফিকেশন', 'Push Notifications'), desc: t('স্ক্যান সম্পন্ন ও ডাটাবেস আপডেটের বার্তা', 'Alerts for scan completions and archive updates'), state: notifications, setter: setNotifications, color: '#00E599' },
                 { icon: <Save size={14} />, label: t('অটো-সেভ প্রমান', 'Auto-Save Scans'), desc: t('স্বয়ংক্রিয়ভাবে স্ক্যান রেজাল্ট ভল্টে সংরক্ষণ', 'Automatically save results to Evidence Vault'), state: autoSave, setter: setAutoSave, color: '#6366F1' },
-                { icon: <Cpu size={14} />, label: t('বিটা এআই ফিচার', 'Beta AI Features'), desc: t('নতুন বঙ্গবিইআরটি মডেলের আগাম এক্সেস', 'Early access to experimental BangaBERT models'), state: betaFeatures, setter: setBetaFeatures, color: '#F97316' },
+                { icon: <Cpu size={14} />, label: t('বিটা এআই ফিচার', 'Beta AI Features'), desc: t('নতুন বাংলাবিইআরটি মডেলের আগাম এক্সেস', 'Early access to experimental BanglaBERT models'), state: betaFeatures, setter: setBetaFeatures, color: '#F97316' },
               ].map((setting, i) => (
                 <div
                   key={i}
@@ -328,11 +336,11 @@ export default function Settings() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ width: 44, height: 44, borderRadius: 16, background: 'linear-gradient(135deg, #00E599, #00D2C2)', color: '#000', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, boxShadow: '0 0 15px rgba(0,229,153,0.3)' }}>
-                TA
+                {userInitials}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <p style={{ fontSize: 14, fontWeight: 800, color: '#FFFFFF', margin: 0 }}>Shahriar Ahmed</p>
-                <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#00E599', margin: 0, fontWeight: 700 }}>RESEARCHER TIER</p>
+                <p style={{ fontSize: 14, fontWeight: 800, color: '#FFFFFF', margin: 0 }}>{userName}</p>
+                <p style={{ fontSize: 10, fontFamily: 'monospace', color: '#00E599', margin: 0, fontWeight: 700 }}>{userRole} TIER</p>
               </div>
             </div>
 

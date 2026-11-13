@@ -496,3 +496,22 @@ body.light-theme {
 ::-webkit-scrollbar-thumb:hover {
   background: #00E599;
 }
+
+/* ── Print (PDF report) ──────────────────────────────────────────────────
+   On screen nothing here applies. When a result page is printed, the app
+   chrome is hidden and the page prints on white. */
+.fl-print-only { display: none; }
+@media print {
+  @page { size: A4; margin: 12mm 11mm; }
+  html { font-size: 13.5px; }
+  html, body, html.light-theme, body.light-theme { background: #FFFFFF !important; }
+  aside, .fl-no-print { display: none !important; }
+  .fl-print-only { display: block !important; }
+  .fl-print-main { margin-left: 0 !important; min-height: 0 !important; }
+  .fl-print-main main { padding: 0 !important; overflow: visible !important; }
+  html #root div, html #root main { background-image: none !important; }
+  html #root > div, html #root .fl-print-main, html #root main { background: #FFFFFF !important; min-height: 0 !important; overflow: visible !important; }
+  .fl-print-root { max-width: none !important; padding: 0 !important; }
+  .fl-print-root .shadow-xl, .fl-print-root .shadow-2xl, .fl-print-root .shadow-md { box-shadow: none !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

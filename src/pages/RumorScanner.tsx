@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Upload, Link as LinkIcon, ArrowRight, CheckCircle, Zap, ShieldCheck, Radar } from 'lucide-react';
 import UploadZone from '@/components/scanner/UploadZone';
 import EvidenceTabCanvas from '@/components/zebeyond/EvidenceTabCanvas';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function RumorScanner() {
   const navigate = useNavigate();
@@ -35,8 +35,8 @@ export default function RumorScanner() {
     setLoading(true);
     setTimeout(() => {
       if (mode === 'image') navigate('/app/ocr-review', { state: { file } });
-      else navigate('/app/result/rumor/scan-001', { state: { claimText: text || url } });
-    }, 1200);
+      else navigate('/app/rumor/processing', { state: { claimText: text || url } });
+    }, 600);
   };
 
   return (
@@ -52,7 +52,7 @@ export default function RumorScanner() {
                 {t('দাবি যাচাইকরণ — ইঞ্জিন ০১', 'CLAIM VERIFICATION — MODULE 01')}
               </div>
               <h1 style={{ fontSize: 26, fontWeight: 900, color: '#fff', margin: 0 }}>{t('গুজব ও দাবি স্ক্যানার', 'Rumor / Claim Scanner')}</h1>
-              <p style={{ fontSize: 13.5, color: '#00D2C2', marginTop: 6, fontFamily: '"Noto Sans Bengali", sans-serif' }}>{t('সন্দেহজনক সংবাদ বা ভাইরাল পোস্টের সত্যতা সরকারি গেজেটের সাহায্যে নিশ্চিত করুন।', 'Verify claims against Ministry gazettes, university notices, and press archives using BangaBERT NLP.')}</p>
+              <p style={{ fontSize: 13.5, color: '#00D2C2', marginTop: 6, fontFamily: '"Noto Sans Bengali", sans-serif' }}>{t('সন্দেহজনক সংবাদ বা ভাইরাল পোস্টের সত্যতা সরকারি গেজেটের সাহায্যে নিশ্চিত করুন।', 'Verify claims against Ministry gazettes, university notices, and press archives using BanglaBERT NLP.')}</p>
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {[{ v: '5', l: t('পাইপলাইন ধাপ', 'Pipeline Stages') }, { v: '48', l: t('প্রমাণ উৎস', 'Evidence Sources') }, { v: '99.4%', l: t('নির্ভুলতা', 'Accuracy') }].map((s, i) => (
@@ -217,7 +217,7 @@ export default function RumorScanner() {
               {loading ? (
                 <>
                   <div style={{ width: 16, height: 16, border: '2px solid #040A0740', borderTop: '2px solid #040A07', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  Initializing BangaBERT Analysis...
+                  Initializing BanglaBERT Analysis...
                 </>
               ) : (
                 <><Zap size={17} /> Verify Claim Against Evidence <ArrowRight size={17} /></>

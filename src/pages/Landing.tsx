@@ -39,7 +39,7 @@ function Particle({ x, y, size, duration, delay }: { x: number; y: number; size:
 // ─── Animated Scan Demo Card ─────────────────────────────────────────────────
 const scanStages = [
   { label: 'Ingesting claim input...', color: '#8E9E97', pct: 20 },
-  { label: 'Running OCR & BangaBERT NLP stance model...', color: '#00D2C2', pct: 50 },
+  { label: 'Running OCR & BanglaBERT NLP stance model...', color: '#00D2C2', pct: 50 },
   { label: 'PID Gazette database cross-reference...', color: '#00E599', pct: 80 },
   { label: 'Generating evidence report & Bengali explanation...', color: '#00E599', pct: 100 },
 ];
@@ -359,7 +359,7 @@ export default function Landing() {
                 title: 'Rumor / Claim Scanner',
                 titleBn: 'ভাইরাল তথ্য ও সংবাদের গেজেট যাচাই',
                 desc: 'Evaluates factual claims against official government gazettes, PID releases, university registrar portals, and verified press archives.',
-                features: ['BangaBERT NLP stance matching', 'OCR for Bengali text screenshots', 'PID Gazette database cross-reference'],
+                features: ['BanglaBERT NLP stance matching', 'OCR for Bengali text screenshots', 'PID Gazette database cross-reference'],
                 cta: 'Launch Rumor Scanner',
                 to: '/app/rumor',
                 btnBg: '#00E599',

@@ -9,7 +9,14 @@ interface LanguageContextType {
   t: (bn: string, en: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const defaultLanguageContext: LanguageContextType = {
+  lang: 'en',
+  setLang: () => {},
+  toggleLang: () => {},
+  t: (_bn: string, en: string) => en,
+};
+
+const LanguageContext = createContext<LanguageContextType>(defaultLanguageContext);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLangState] = useState<Language>(() => {
@@ -43,8 +50,5 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
+  return context || defaultLanguageContext;
 };

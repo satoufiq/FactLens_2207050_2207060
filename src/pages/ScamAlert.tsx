@@ -52,7 +52,7 @@ export default function ScamAlert() {
       // Navigate to OCR review or directly to scam processing with OCR flag
       navigate('/app/ocr-review', { state: { content: inputVal, fromModule: 'scam' } });
     } else {
-      navigate('/app/scam/processing', { state: { content: inputVal, type: 'text' } });
+      navigate('/app/result/scam', { state: { content: inputVal, type: 'text' } });
     }
   };
 

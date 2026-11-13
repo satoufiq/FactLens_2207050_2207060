@@ -21,7 +21,49 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { scanHistoryMockData, type ScanHistoryItem, type ScanType, type ScanResultStatus } from '../data/scanHistoryMockData';
+import { useAuth } from '../context/AuthContext';
+import { SystemStorage, type ScanRecord } from '@/services/storage';
+
+export type ScanType = 'RUMOR' | 'SCAM' | 'IMAGE';
+export type ScanResultStatus = 
+  | 'SUPPORTED' 
+  | 'UNVERIFIED' 
+  | 'CONTRADICTED' 
+  | 'HIGH_RISK' 
+  | 'MEDIUM_RISK'
+  | 'LOW_RISK'
+  | 'LIKELY_AUTHENTIC' 
+  | 'POSSIBLE_MANIPULATION' 
+  | 'LIKELY_AI_GENERATED' 
+  | 'UNABLE_TO_ANALYZE';
+
+export interface ScanHistoryItem {
+  id: string;
+  title: string;
+  titleBn?: string;
+  type: ScanType;
+  inputType: string;
+  result: ScanResultStatus;
+  status: 'COMPLETED' | 'PROCESSING' | 'PARTIAL' | 'FAILED';
+  createdAt: string;
+  timestamp: string;
+  preview: string;
+}
+
+function mapScanToHistoryItem(scan: ScanRecord): ScanHistoryItem {
+  return {
+    id: scan.id,
+    title: scan.title,
+    titleBn: scan.summaryBn || scan.title,
+    type: scan.type,
+    inputType: scan.inputUrl ? 'URL' : 'TEXT',
+    result: (scan.result as unknown as ScanResultStatus) || 'UNVERIFIED',
+    status: 'COMPLETED',
+    createdAt: scan.createdAt,
+    timestamp: new Date(scan.createdAt).toLocaleDateString(),
+    preview: scan.inputText || scan.summary,
+  };
+}
 
 export const History: React.FC = () => {
   const { lang } = useLanguage();
@@ -29,9 +71,16 @@ export const History: React.FC = () => {
   const { theme } = useTheme();
   const isLight = theme === 'light';
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Data & State
-  const [historyList, setHistoryList] = useState<ScanHistoryItem[]>(scanHistoryMockData);
+  const [historyList, setHistoryList] = useState<ScanHistoryItem[]>(() => {
+    return SystemStorage.getScans().map(mapScanToHistoryItem);
+  });
+
+  useEffect(() => {
+    setHistoryList(SystemStorage.getScans().map(mapScanToHistoryItem));
+  }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedResult, setSelectedResult] = useState<string>('ALL');
@@ -45,33 +94,18 @@ export const History: React.FC = () => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Animated stat counters
-  const [counts, setCounts] = useState({ total: 0, rumor: 0, scam: 0, image: 0 });
+  // Dynamic stat counters from actual list
+  const totalCount = historyList.length;
+  const rumorCount = historyList.filter((i) => i.type === 'RUMOR').length;
+  const scamCount = historyList.filter((i) => i.type === 'SCAM').length;
+  const imageCount = historyList.filter((i) => i.type === 'IMAGE').length;
 
-  useEffect(() => {
-    const totalTarget = 24;
-    const rumorTarget = 10;
-    const scamTarget = 8;
-    const imageTarget = 6;
-    const duration = 700;
-    const steps = 20;
-    const stepTime = duration / steps;
-
-    let step = 0;
-    const timer = setInterval(() => {
-      step += 1;
-      const progress = step / steps;
-      setCounts({
-        total: Math.round(totalTarget * progress),
-        rumor: Math.round(rumorTarget * progress),
-        scam: Math.round(scamTarget * progress),
-        image: Math.round(imageTarget * progress)
-      });
-      if (step >= steps) clearInterval(timer);
-    }, stepTime);
-
-    return () => clearInterval(timer);
-  }, []);
+  const counts = {
+    total: totalCount,
+    rumor: rumorCount,
+    scam: scamCount,
+    image: imageCount,
+  };
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -80,6 +114,7 @@ export const History: React.FC = () => {
 
   const handleDeleteItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    SystemStorage.deleteScan(id);
     setHistoryList((prev) => prev.filter((item) => item.id !== id));
     setActiveMenuId(null);
     triggerToast(isBn ? 'রেকর্ড সফলভাবে মুছে ফেলা হয়েছে' : 'Scan record removed from history');

@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, Download, Share2 } from 'lucide-react';
 
 interface ResultActionsProps {
   isSaved: boolean;
   onToggleSave: () => void;
   onOpenShare: () => void;
   onCheckAgain: () => void;
+  onDownloadPdf?: () => void;
+  isDownloadingPdf?: boolean;
   isBn?: boolean;
 }
 
@@ -15,6 +17,8 @@ export const ResultActions: React.FC<ResultActionsProps> = ({
   onToggleSave,
   onOpenShare,
   onCheckAgain,
+  onDownloadPdf,
+  isDownloadingPdf,
   isBn
 }) => {
   return (
@@ -49,6 +53,17 @@ export const ResultActions: React.FC<ResultActionsProps> = ({
             <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>{isBn ? 'শেয়ার' : 'Share'}</span>
           </button>
+
+          {onDownloadPdf && (
+            <button
+              onClick={onDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs md:text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all active:scale-95 shadow-sm disabled:opacity-60"
+            >
+              <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span>{isDownloadingPdf ? (isBn ? 'তৈরি হচ্ছে…' : 'Preparing…') : (isBn ? 'পিডিএফ রিপোর্ট' : 'PDF Report')}</span>
+            </button>
+          )}
 
           <button
             onClick={onCheckAgain}

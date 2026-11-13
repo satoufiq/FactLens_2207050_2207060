@@ -1,30 +1,57 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Zap } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle, Zap, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const { login, register, clearError } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      navigate('/app');
-    }, 800);
+    setErrorMessage(null);
+    clearError();
+
+    try {
+      await login(email, password);
+      const destination = (location.state as any)?.from?.pathname || '/app';
+      navigate(destination, { replace: true });
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Authentication failed. Check your email and password.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDemoLogin = () => {
-    setEmail('shahriar@example.com');
-    setPassword('demo123456');
+  const handleDemoLogin = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
-      navigate('/app');
-    }, 600);
+    setErrorMessage(null);
+    clearError();
+    setEmail('analyst@factlens.gov.bd');
+    setPassword('Password@123');
+
+    try {
+      await login('analyst@factlens.gov.bd', 'Password@123');
+      navigate('/app', { replace: true });
+    } catch {
+      try {
+        await register('Senior Forensic Analyst', 'analyst@factlens.gov.bd', 'Password@123', 'ROLE_ANALYST');
+        navigate('/app', { replace: true });
+      } catch (err: any) {
+        setErrorMessage(err.message || 'Demo session could not be established.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -157,6 +184,25 @@ export default function Login() {
               Enter your registered email and password to access the platform workspace.
             </p>
           </div>
+
+          {errorMessage && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '12px 16px',
+                borderRadius: 12,
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#F87171',
+                fontSize: 12.5,
+              }}
+            >
+              <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             

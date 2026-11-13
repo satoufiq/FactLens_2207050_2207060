@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Landing from './pages/Landing';
 import HowItWorks from './pages/HowItWorks';
@@ -16,7 +19,6 @@ import ImageCheck from './pages/ImageCheck';
 import ImageProcessing from './pages/ImageProcessing';
 import DeepfakeResult from './pages/DeepfakeResult';
 import ScamAlert from './pages/ScamAlert';
-import ScamProcessing from './pages/ScamProcessing';
 import ScamResult from './pages/ScamResult';
 import ScamAwareness from './pages/ScamAwareness';
 import History from './pages/History';
@@ -30,46 +32,57 @@ export default function App() {
   return (
     <LanguageProvider>
       <ThemeProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Landing, Walkthrough & Authentication Pages */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/architecture" element={<Architecture />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Landing, Walkthrough & Authentication Pages */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/architecture" element={<Architecture />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-            {/* Application Layout Sub-routes */}
-            <Route path="/app" element={<AppLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="rumor" element={<RumorScanner />} />
-              <Route path="ocr-review" element={<OCRReview />} />
-              <Route path="rumor/processing" element={<RumorProcessing />} />
-              <Route path="result/rumor/:id" element={<RumorResult />} />
-              <Route path="result/rumor" element={<RumorResult />} />
-              <Route path="scam" element={<ScamAlert />} />
-              <Route path="scam/processing" element={<ScamProcessing />} />
-              <Route path="result/scam/:id" element={<ScamResult />} />
-              <Route path="result/scam" element={<ScamResult />} />
-              <Route path="scam-awareness" element={<ScamAwareness />} />
-              <Route path="safety-guide" element={<ScamAwareness />} />
-              <Route path="image" element={<ImageCheck />} />
-              <Route path="image/processing" element={<ImageProcessing />} />
-              <Route path="result/deepfake/:id" element={<DeepfakeResult />} />
-              <Route path="result/deepfake" element={<DeepfakeResult />} />
-              <Route path="history" element={<History />} />
-              <Route path="history/:id" element={<ScanDetails />} />
-              <Route path="saved" element={<SavedEvidence />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="help" element={<TechSpecHelp />} />
-              <Route path="architecture" element={<Architecture />} />
-            </Route>
+              {/* Protected Application Workspace */}
+              <Route
+                path="/app"
+                element={
+                  <ProtectedRoute>
+                    <ErrorBoundary fallbackTitle="Application Workspace Alert">
+                      <AppLayout />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="rumor" element={<RumorScanner />} />
+                <Route path="ocr-review" element={<OCRReview />} />
+                <Route path="rumor/processing" element={<RumorProcessing />} />
+                <Route path="result/rumor/:id" element={<RumorResult />} />
+                <Route path="result/rumor" element={<RumorResult />} />
+                <Route path="scam" element={<ScamAlert />} />
+                <Route path="scam/processing" element={<ScamResult />} />
+                <Route path="result/scam/:id" element={<ScamResult />} />
+                <Route path="result/scam" element={<ScamResult />} />
+                <Route path="scam-awareness" element={<ScamAwareness />} />
+                <Route path="safety-guide" element={<ScamAwareness />} />
+                <Route path="image" element={<ImageCheck />} />
+                <Route path="image/processing" element={<ImageProcessing />} />
+                <Route path="result/deepfake/:id" element={<DeepfakeResult />} />
+                <Route path="result/deepfake" element={<DeepfakeResult />} />
+                <Route path="history" element={<History />} />
+                <Route path="history/:id" element={<ScanDetails />} />
+                <Route path="saved" element={<SavedEvidence />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="help" element={<TechSpecHelp />} />
+                <Route path="architecture" element={<Architecture />} />
+              </Route>
 
-            {/* Catch-all redirect to Landing */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+              {/* Catch-all redirect to Landing */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </ThemeProvider>
     </LanguageProvider>
   );

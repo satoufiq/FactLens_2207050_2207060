@@ -9,8 +9,10 @@ import {
   EyeOff,
   ArrowRight,
   CheckCircle,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
@@ -24,15 +26,17 @@ export default function Register() {
   // States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successState, setSuccessState] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   // Password Requirements Validation
-  const reqMinLength = password.length >= 8;
+  const reqMinLength = password.length >= 6;
+  const reqHasNumber = /[0-9]/.test(password);
+  const reqHasLetter = /[a-zA-Z]/.test(password);
   const reqUppercase = /[A-Z]/.test(password);
-  const reqLowercase = /[a-z]/.test(password);
-  const reqNumber = /[0-9]/.test(password);
 
-  const passedReqCount = [reqMinLength, reqUppercase, reqLowercase, reqNumber].filter(Boolean).length;
+  const passedReqCount = [reqMinLength, reqHasNumber, reqHasLetter, reqUppercase].filter(Boolean).length;
 
   // Strength calculation
   let strengthLabel = 'Weak';
@@ -52,24 +56,52 @@ export default function Register() {
   // Confirm password match status
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
-  // Form validity check
+  // Form validity check (requires min 6 chars matching backend schema)
   const isEmailValid = email.includes('@') && email.includes('.');
   const isFormValid =
     fullName.trim().length > 1 &&
     isEmailValid &&
-    passedReqCount === 4 &&
+    reqMinLength &&
     passwordsMatch &&
     agreedToTerms;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
+    setErrorMessage(null);
+
+    if (fullName.trim().length < 2) {
+      setErrorMessage('Please enter your full name (minimum 2 characters).');
+      return;
+    }
+    if (!isEmailValid) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match. Please re-enter.');
+      return;
+    }
+    if (!agreedToTerms) {
+      setErrorMessage('Please agree to the Terms of Service & Privacy Policy.');
+      return;
+    }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await register(fullName.trim(), email.trim(), password, 'ROLE_ANALYST');
       setSuccessState(true);
-    }, 1000);
+      setTimeout(() => {
+        navigate('/app', { replace: true });
+      }, 1200);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Registration failed. Email may already be registered.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -220,6 +252,25 @@ export default function Register() {
                 </p>
               </div>
 
+              {errorMessage && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#F87171',
+                    fontSize: 12.5,
+                  }}
+                >
+                  <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 
                 {/* Full Name */}
@@ -341,15 +392,30 @@ export default function Register() {
 
                 </div>
 
-                {/* Password Strength Indicator */}
+                {/* Password Strength & Live Validation Pills */}
                 {password.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: '#080C0B', padding: 10, borderRadius: 10, border: '1px solid #1B2923' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: '#080C0B', padding: 12, borderRadius: 12, border: '1px solid #1B2923' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, fontFamily: 'monospace' }}>
                       <span style={{ color: '#8E9E97' }}>Password Strength:</span>
                       <span style={{ color: strengthColor, fontWeight: 800 }}>{strengthLabel}</span>
                     </div>
                     <div style={{ height: 4, background: '#1B2923', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${strengthPct}%`, background: strengthColor, transition: 'all 0.3s ease' }} />
+                    </div>
+
+                    {/* Live checks */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                      <span style={{ fontSize: 10, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 4, color: reqMinLength ? '#00E599' : '#5A6E64' }}>
+                        <CheckCircle size={12} style={{ color: reqMinLength ? '#00E599' : '#3A4E44' }} /> 6+ characters
+                      </span>
+                      <span style={{ fontSize: 10, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 4, color: passwordsMatch ? '#00E599' : (confirmPassword.length > 0 ? '#F87171' : '#5A6E64') }}>
+                        <CheckCircle size={12} style={{ color: passwordsMatch ? '#00E599' : '#3A4E44' }} /> {passwordsMatch ? 'Passwords match' : (confirmPassword.length > 0 ? 'Mismatch' : 'Repeat password')}
+                      </span>
+                      {reqHasNumber && (
+                        <span style={{ fontSize: 10, fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: 4, color: '#00E599' }}>
+                          <CheckCircle size={12} /> Numbers included
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -368,22 +434,24 @@ export default function Register() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={!isFormValid || isSubmitting}
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     padding: '13px',
                     borderRadius: 14,
                     fontSize: 13.5,
                     fontWeight: 900,
-                    background: isFormValid ? '#00E599' : '#1B2923',
-                    color: isFormValid ? '#000000' : '#5A6E64',
+                    background: '#00E599',
+                    color: '#000000',
                     border: 'none',
-                    cursor: isFormValid && !isSubmitting ? 'pointer' : 'not-allowed',
+                    cursor: isSubmitting ? 'wait' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    boxShadow: isFormValid ? '0 0 20px rgba(0, 229, 153, 0.35)' : 'none',
+                    boxShadow: isFormValid ? '0 0 24px rgba(0, 229, 153, 0.45)' : '0 0 10px rgba(0, 229, 153, 0.15)',
+                    filter: isFormValid ? 'brightness(1)' : 'brightness(0.95)',
+                    opacity: isSubmitting ? 0.7 : 1,
                     transition: 'all 0.2s ease',
                   }}
                 >

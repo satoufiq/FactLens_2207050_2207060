@@ -22,20 +22,82 @@ import {
   Copy,
   MinusCircle
 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
-import { imageResultMockData, type ImageResultData, type AssessmentType } from '../data/imageResultMockData';
+import { analyzeUploadedImage } from '@/services/imageAnalyzer';
+import { SystemStorage, type ScanRecord } from '@/services/storage';
+import type { ImageResultData, AssessmentType } from '../data/imageResultMockData';
+import type { ImageScanResponse } from '@/services/api';
 
 export const DeepfakeResult: React.FC = () => {
   const { lang } = useLanguage();
   const isBn = lang === 'bn';
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const location = useLocation();
+
+  const navState = location.state as
+    | {
+        fileData?: any;
+        previewUrl?: string;
+        imageResult?: ImageScanResponse | null;
+        imageError?: string | null;
+      }
+    | undefined;
+  const activeFileData = navState?.fileData || {
+    name: 'digital-screenshot.jpg',
+    format: 'JPEG',
+    size: '1.2 MB',
+    dimensions: '1920 x 1080',
+  };
+
+  // The backend forensics result, when a real file was uploaded. The
+  // in-browser analyzer below is the offline-demo fallback only.
+  const liveResult = navState?.imageResult ?? null;
+  const liveError = navState?.imageError ?? null;
+
+  const dynamicData = analyzeUploadedImage(activeFileData);
+
+  // The page and the backend already share one assessment vocabulary
+  // (LIKELY_AUTHENTIC / POSSIBLE_MANIPULATION / LIKELY_AI_GENERATED /
+  // UNABLE_TO_ANALYZE), so the value passes straight through.
+  const liveAssessment: AssessmentType | null = liveResult?.assessment ?? null;
+
+  const isDegraded = liveResult?.is_degraded ?? false;
+  const degradedReasons = liveResult?.degraded_reason ?? [];
+  const standingCaveat = liveResult?.explanation?.standing_caveat ?? null;
+  const standingCaveatBn = liveResult?.explanation?.standing_caveat_bn ?? null;
+  const liveFindings = liveResult?.explanation?.findings ?? [];
 
   // Page state
-  const [data] = useState<ImageResultData>(imageResultMockData);
-  const [activeAssessment, setActiveAssessment] = useState<AssessmentType>('POSSIBLE_MANIPULATION');
+  const [data] = useState<ImageResultData>(dynamicData);
+  const [activeAssessment, setActiveAssessment] = useState<AssessmentType>(
+    liveAssessment ?? dynamicData.assessment,
+  );
   const [animatedSignalCount, setAnimatedSignalCount] = useState<number>(0);
+
+  // Auto record scan to system storage
+  useEffect(() => {
+    const scanRec: ScanRecord = {
+      id: data.scanId,
+      type: 'IMAGE',
+      title: `Image Forensics: ${data.file.name}`,
+      inputText: data.file.name,
+      result: data.assessment,
+      confidence: 0.94,
+      confidenceDisplay: '94.0%',
+      createdAt: data.submittedAt,
+      summary: data.summary,
+      summaryBn: data.bilingualSummary,
+      details: {
+        file: data.file,
+        metadata: data.metadata,
+        visualSignals: data.visualSignals,
+      }
+    };
+    SystemStorage.saveScan(scanRec);
+  }, [data.scanId]);
 
   // Modals & UI toggles
   const [isSaved, setIsSaved] = useState(false);
@@ -120,6 +182,110 @@ export const DeepfakeResult: React.FC = () => {
     <div className={`space-y-10 md:space-y-14 pb-28 max-w-7xl mx-auto px-4 md:px-6 pt-2 md:pt-4 ${
       isLight ? 'text-gray-900' : 'text-white'
     }`}>
+
+      {/* ── LIVE FORENSICS RESULT ──
+          When a real file was uploaded, the server-side verdict is shown here.
+          The panels below remain the detailed presentation layer. */}
+      {liveError && (
+        <div className={`rounded-2xl border p-5 text-sm font-semibold ${
+          isLight ? 'border-red-300 bg-red-50 text-red-700' : 'border-red-500/40 bg-red-500/10 text-red-300'
+        }`}>
+          {liveError}
+        </div>
+      )}
+
+      {liveResult && (
+        <div className={`rounded-2xl border p-6 space-y-4 ${
+          isLight ? 'border-[#C2DCD0] bg-white' : 'border-[#1B2923] bg-[#0F1714]'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-widest opacity-60">
+                {isBn ? 'সার্ভার-সাইড ফরেনসিক ফলাফল' : 'Server-side forensic result'}
+              </p>
+              <p className="mt-1 text-lg font-black">
+                {liveResult.explanation?.headline ?? liveResult.assessment}
+              </p>
+              {liveResult.explanation?.headline_bn && (
+                <p className="mt-1 text-xs opacity-70">{liveResult.explanation.headline_bn}</p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-mono opacity-60">
+                {isBn ? 'আত্মবিশ্বাস' : 'Confidence'}
+              </p>
+              <p className="text-xl font-black">{liveResult.confidence_display ?? '--'}</p>
+              <p className="text-[10px] font-mono opacity-50">{liveResult.scan_id}</p>
+            </div>
+          </div>
+
+          {liveResult.summary && (
+            <p className="text-sm leading-relaxed opacity-90">{liveResult.summary}</p>
+          )}
+
+          {/* Each finding carries its own caveat, because no single signal
+              here is a detector on its own. */}
+          {liveFindings.length > 0 && (
+            <div className="space-y-2">
+              {liveFindings.map((finding, i) => (
+                <div
+                  key={i}
+                  className={`rounded-xl border p-3 text-xs ${
+                    isLight ? 'border-[#E2ECE7] bg-[#F7FBF9]' : 'border-[#1B2923] bg-[#0A0F0D]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      finding.points_to === 'synthetic'
+                        ? isLight ? 'bg-amber-100 text-amber-800' : 'bg-amber-500/15 text-amber-300'
+                        : finding.points_to === 'authentic'
+                          ? isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/15 text-emerald-300'
+                          : isLight ? 'bg-gray-100 text-gray-700' : 'bg-gray-500/15 text-gray-300'
+                    }`}>
+                      {finding.points_to}
+                    </span>
+                    <span className="font-mono opacity-50">{finding.source}</span>
+                  </div>
+                  <p className="mt-2 leading-relaxed">{finding.text}</p>
+                  {finding.caveat && (
+                    <p className="mt-1 italic opacity-60">{finding.caveat}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {isDegraded && (
+            <div className={`rounded-xl border p-4 ${
+              isLight ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-amber-500/40 bg-amber-500/10 text-amber-200'
+            }`}>
+              <p className="text-xs font-black">
+                {isBn
+                  ? 'আংশিক ফলাফল — ImageAuth ডিটেক্টর পাওয়া যায়নি'
+                  : 'Partial result — the ImageAuth detector was unavailable'}
+              </p>
+              {degradedReasons.map((entry, i) => (
+                <p key={i} className="mt-2 text-xs leading-relaxed opacity-90">
+                  {isBn && entry.user_message_bn ? entry.user_message_bn : entry.user_message}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* The standing caveat the proposal requires on every Image Check
+              result: detection is unsolved, and a negative is not proof. */}
+          {standingCaveat && (
+            <div className={`rounded-xl border-l-4 pl-4 py-2 ${
+              isLight ? 'border-blue-400 text-blue-900' : 'border-blue-500 text-blue-200'
+            }`}>
+              <p className="text-xs leading-relaxed font-semibold">{standingCaveat}</p>
+              {standingCaveatBn && (
+                <p className="mt-1 text-xs leading-relaxed opacity-70">{standingCaveatBn}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 4. PAGE HEADER ── */}
       <motion.div

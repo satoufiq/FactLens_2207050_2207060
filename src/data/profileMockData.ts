@@ -13,6 +13,8 @@ export interface UserProfileData {
     initials: string;
     status: string;
     completenessPct: number;
+    bio?: string;
+    avatarUrl?: string;
   };
   stats: {
     totalScans: number;

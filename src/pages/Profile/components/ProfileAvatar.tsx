@@ -4,6 +4,7 @@ import { Camera } from 'lucide-react';
 
 interface ProfileAvatarProps {
   initials: string;
+  avatarUrl?: string;
   statusText: string;
   onOpenUpload: () => void;
   isBn?: boolean;
@@ -11,6 +12,7 @@ interface ProfileAvatarProps {
 
 export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
   initials,
+  avatarUrl,
   statusText,
   onOpenUpload,
   isBn
@@ -24,7 +26,11 @@ export const ProfileAvatar: React.FC<ProfileAvatarProps> = ({
         onClick={onOpenUpload}
         className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[#172554] text-white flex items-center justify-center font-extrabold text-2xl md:text-3xl tracking-wider shadow-lg border-4 border-white dark:border-slate-800 cursor-pointer relative overflow-hidden select-none"
       >
-        <span>{initials}</span>
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <span>{initials}</span>
+        )}
 
         {/* Translucent Dark Overlay on Hover (Section 8) */}
         <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-white text-[10px] font-bold space-y-1">

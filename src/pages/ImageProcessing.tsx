@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileSearch,
@@ -13,6 +13,15 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { imageProcessingData, type ProcessingStepItem } from '../data/imageProcessingMockData';
+import {
+  submitScanOnce,
+  createImageScan,
+  pollImageScan,
+  ApiError,
+  type ImageScanResponse,
+  type ScanStatus,
+} from '@/services/api';
+import { SystemStorage, type ScanRecord } from '@/services/storage';
 
 export const ImageProcessing: React.FC = () => {
   const { lang } = useLanguage();
@@ -55,21 +64,185 @@ export const ImageProcessing: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Completion navigation redirect
+  const location = useLocation();
+  const navState = location.state as
+    | { fileData?: any; previewUrl?: string; rawFile?: File | null }
+    | undefined;
+
+  // Facts about the file the user actually uploaded (never the sample's).
+  const [acceptedScanId, setAcceptedScanId] = useState<string | null>(null);
+  const uploaded = navState?.rawFile ?? null;
+  const fileName = uploaded?.name ?? '—';
+  const fileFormat = uploaded?.type ? uploaded.type.replace('image/', '').toUpperCase() : '—';
+  const fileSize = uploaded
+    ? uploaded.size >= 1024 * 1024
+      ? `${(uploaded.size / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(uploaded.size / 1024))} KB`
+    : '—';
+  const [dimensions, setDimensions] = useState<string>('—');
   useEffect(() => {
-    if (isCompleted) {
-      const redirectTimer = setTimeout(() => {
-        navigate('/app/result/deepfake/img-902');
-      }, 1000);
-      return () => clearTimeout(redirectTimer);
+    if (!navState?.previewUrl) return;
+    const img = new Image();
+    img.onload = () => setDimensions(`${img.naturalWidth}×${img.naturalHeight}`);
+    img.src = navState.previewUrl;
+  }, [navState?.previewUrl]);
+
+  // --- live Image Check analysis ------------------------------------------
+  // Upload the bytes and poll. The forensics (EXIF, noise, compression,
+  // frequency) run server-side; while ImageAuth is unregistered the scan comes
+  // back PARTIAL, which the result page reports rather than hides.
+  const [liveResult, setLiveResult] = useState<ImageScanResponse | null>(null);
+  const [liveStatus, setLiveStatus] = useState<ScanStatus>('PENDING');
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [analysisSettled, setAnalysisSettled] = useState(false);
+
+  useEffect(() => {
+    const file = navState?.rawFile;
+    if (!file) {
+      // No real upload (the sample walkthrough); let the animation finish.
+      setAnalysisSettled(true);
+      return;
     }
-  }, [isCompleted, navigate]);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const accepted = await submitScanOnce(`image:${location.key}`, () => createImageScan(file));
+        if (cancelled) return;
+        setAcceptedScanId(accepted.scan_id);
+        setLiveStatus(accepted.status);
+
+        const result = await pollImageScan(accepted.scan_id, {
+          onUpdate: (status) => {
+            if (!cancelled) setLiveStatus(status);
+          },
+        });
+        if (cancelled) return;
+
+        setLiveResult(result);
+        setLiveStatus(result.status);
+
+        const record: ScanRecord = {
+          id: result.scan_id,
+          type: 'IMAGE',
+          title: result.analysis?.file_name ?? file.name,
+          inputText: result.analysis?.file_name ?? file.name,
+          result: (result.assessment ?? 'UNABLE_TO_ANALYZE') as ScanRecord['result'],
+          confidence: result.confidence ?? 0,
+          confidenceDisplay: result.confidence_display ?? '--',
+          createdAt: result.created_at || new Date().toISOString(),
+          summary: result.summary ?? result.explanation?.summary ?? '',
+          summaryBn: result.summary_bn ?? result.explanation?.headline_bn ?? '',
+          evidenceCount: result.explanation?.findings?.length ?? 0,
+          lifecycleStatus: result.status,
+          isDegraded: result.is_degraded,
+          details: {
+            degradedReason: result.degraded_reason,
+            analysis: result.analysis,
+            modelRuns: result.model_runs,
+            score: result.score,
+          },
+        };
+        SystemStorage.saveScan(record);
+      } catch (e) {
+        if (cancelled) return;
+        setLiveError(
+          e instanceof ApiError
+            ? e.detail
+            : 'FactLens could not reach the Image Check service. Check that the backend is running.',
+        );
+      } finally {
+        if (!cancelled) setAnalysisSettled(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navState?.rawFile]);
+
+  // Navigate only once both the animation and the real analysis are done, so
+  // the report page never opens before its data exists.
+  useEffect(() => {
+    if (!isCompleted || !analysisSettled) return;
+    const redirectTimer = setTimeout(() => {
+      navigate('/app/result/deepfake', {
+        state: {
+          fileData: navState?.fileData,
+          previewUrl: navState?.previewUrl,
+          imageResult: liveResult,
+          imageError: liveError,
+        }
+      });
+    }, 800);
+    return () => clearTimeout(redirectTimer);
+  }, [isCompleted, analysisSettled, navigate, navState, liveResult, liveError]);
+
+  const liveStatusLabel: Record<ScanStatus, string> = {
+    PENDING: isBn ? 'সারিতে অপেক্ষমাণ' : 'Queued',
+    PROCESSING: isBn ? 'বিশ্লেষণ চলছে' : 'Analyzing',
+    COMPLETED: isBn ? 'সম্পন্ন' : 'Complete',
+    PARTIAL: isBn ? 'আংশিক ফলাফল' : 'Complete (partial)',
+    FAILED: isBn ? 'ব্যর্থ' : 'Failed',
+    TIMEOUT: isBn ? 'সময় শেষ' : 'Timed out',
+    AWAITING_INPUT: isBn ? 'আপনার ইনপুট প্রয়োজন' : 'Needs your input',
+  };
 
   return (
     <div className={`space-y-10 md:space-y-14 pb-28 max-w-7xl mx-auto px-4 md:px-6 pt-2 md:pt-4 ${
       isLight ? 'text-gray-900' : 'text-white'
     }`}>
-      
+
+      {/* ── LIVE BACKEND STATUS ── */}
+      <div
+        className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 text-xs font-mono ${
+          liveError
+            ? isLight ? 'border-red-300 bg-red-50 text-red-700' : 'border-red-500/40 bg-red-500/10 text-red-300'
+            : liveResult?.is_degraded
+              ? isLight ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+              : isLight ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-blue-500/30 bg-blue-500/10 text-blue-300'
+        }`}
+      >
+        {liveError ? (
+          <>
+            <Info size={14} className="shrink-0" />
+            <span className="font-bold">{liveError}</span>
+          </>
+        ) : !navState?.rawFile ? (
+          <>
+            <Info size={14} className="shrink-0" />
+            <span className="font-bold">
+              {isBn
+                ? 'নমুনা ওয়াকথ্রু — কোনো ফাইল আপলোড করা হয়নি।'
+                : 'Sample walkthrough — no file was uploaded.'}
+            </span>
+          </>
+        ) : (
+          <>
+            <ScanSearch size={14} className="shrink-0" />
+            <span className="font-bold">
+              {liveStatusLabel[liveStatus]}
+              {liveResult?.scan_id ? ` · ${liveResult.scan_id}` : ''}
+            </span>
+            {liveResult?.assessment && (
+              <span className="opacity-80">{liveResult.assessment.replace(/_/g, ' ')}</span>
+            )}
+            {liveResult?.model_runs?.map((run) => (
+              <span key={run.model_name} className="opacity-80">
+                {run.model_name} {run.model_version} → {run.status}
+              </span>
+            ))}
+            {liveResult?.is_degraded && (
+              <span className="font-bold">
+                {isBn
+                  ? 'আংশিক — ImageAuth ডিটেক্টর পাওয়া যায়নি'
+                  : 'Partial — the ImageAuth detector was unavailable'}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
       {/* ── 3. PAGE HEADER ── */}
       <motion.div
         initial={{ opacity: 0, y: 18 }}
@@ -113,11 +286,11 @@ export const ImageProcessing: React.FC = () => {
         <div className={`flex flex-wrap items-center gap-3 pt-1 text-xs font-mono font-bold ${
           isLight ? 'text-gray-600' : 'text-gray-400'
         }`}>
-          <span>Scan ID: <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{imageProcessingData.scanId}</strong></span>
+          <span>Scan ID: <strong className={isLight ? 'text-blue-700' : 'text-blue-400'}>{acceptedScanId ?? '—'}</strong></span>
           <span>•</span>
           <span className="text-emerald-600 dark:text-emerald-400">Processing</span>
           <span>•</span>
-          <span>{imageProcessingData.file.format} ({imageProcessingData.file.dimensions})</span>
+          <span>{fileFormat} ({dimensions})</span>
         </div>
       </motion.div>
 
@@ -305,13 +478,13 @@ export const ImageProcessing: React.FC = () => {
               <div className="flex items-center gap-2">
                 <FileImage className="w-4 h-4 text-blue-500 shrink-0" />
                 <span className={`font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  {imageProcessingData.file.name}
+                  {fileName}
                 </span>
               </div>
 
               <div className="flex items-center gap-3">
                 <span className={isLight ? 'text-gray-600' : 'text-gray-400'}>
-                  {imageProcessingData.file.format} • {imageProcessingData.file.dimensions} • {imageProcessingData.file.size}
+                  {fileFormat} • {dimensions} • {fileSize}
                 </span>
                 <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white">
                   PROCESSING
