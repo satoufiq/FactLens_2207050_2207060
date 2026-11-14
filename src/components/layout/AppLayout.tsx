@@ -15,6 +15,7 @@ export default function AppLayout() {
 
       {/* Main area — pushed right by sidebar */}
       <div
+        className="fl-print-main"
         style={{
           marginLeft: sidebarWidth,
           flex: 1,
@@ -28,6 +29,7 @@ export default function AppLayout() {
       >
         {/* Subtle grid background */}
         <div
+          className="fl-no-print"
           style={{
             position: 'fixed',
             inset: 0,
@@ -38,11 +40,11 @@ export default function AppLayout() {
           }}
         />
         {/* Ambient glow */}
-        <div style={{ position: 'fixed', top: '20%', right: '25%', width: 480, height: 480, background: 'radial-gradient(circle, rgba(0,229,153,0.04) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0 }} />
-        <div style={{ position: 'fixed', bottom: '20%', left: '33%', width: 320, height: 320, background: 'radial-gradient(circle, rgba(0,210,194,0.03) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0 }} />
+        <div className="fl-no-print" style={{ position: 'fixed', top: '20%', right: '25%', width: 480, height: 480, background: 'radial-gradient(circle, rgba(0,229,153,0.04) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0 }} />
+        <div className="fl-no-print" style={{ position: 'fixed', bottom: '20%', left: '33%', width: 320, height: 320, background: 'radial-gradient(circle, rgba(0,210,194,0.03) 0%, transparent 70%)', borderRadius: '50%', pointerEvents: 'none', zIndex: 0 }} />
 
         {/* Topbar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 30 }}>
+        <div className="fl-no-print" style={{ position: 'sticky', top: 0, zIndex: 30 }}>
           <Topbar />
         </div>
 

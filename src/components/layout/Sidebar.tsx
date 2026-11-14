@@ -252,7 +252,7 @@ export default function Sidebar({ onWidthChange }: SidebarProps) {
       {!collapsed && (
         <div style={{ padding: 12, borderTop: `1px solid ${isLight ? '#B8D9CB' : '#1B2923'}`, background: isLight ? '#D4E6DC' : '#060A09' }}>
           <div style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 800, color: isLight ? '#007A50' : '#00E599' }}>PID GAZETTE SYNC</div>
-          <div style={{ fontSize: 9, fontFamily: 'monospace', color: isLight ? '#2D4239' : '#8E9E97', marginTop: 2 }}>BangaBERT v3.4 • Real-time</div>
+          <div style={{ fontSize: 9, fontFamily: 'monospace', color: isLight ? '#2D4239' : '#8E9E97', marginTop: 2 }}>BanglaBERT v3.4 • Real-time</div>
         </div>
       )}
     </aside>

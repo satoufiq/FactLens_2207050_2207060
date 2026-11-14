@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Share2, Bookmark, BookmarkCheck, MoreVertical, RefreshCw, CheckCircle2, Sparkles, Trash2, ExternalLink } from 'lucide-react';
+import { Share2, Bookmark, BookmarkCheck, MoreVertical, RefreshCw, CheckCircle2, Sparkles, Trash2, ExternalLink, Download } from 'lucide-react';
 import type { ScanType } from '../../../data/scanDetailsMockData';
 
 interface ScanDetailsHeaderProps {
@@ -15,6 +15,8 @@ interface ScanDetailsHeaderProps {
   onCheckAgain: () => void;
   onDeleteScan: () => void;
   onOpenOriginal?: () => void;
+  onDownloadPdf?: () => void;
+  isDownloadingPdf?: boolean;
   isBn?: boolean;
 }
 
@@ -30,6 +32,8 @@ export const ScanDetailsHeader: React.FC<ScanDetailsHeaderProps> = ({
   onCheckAgain,
   onDeleteScan,
   onOpenOriginal,
+  onDownloadPdf,
+  isDownloadingPdf,
   isBn
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -105,6 +109,17 @@ export const ScanDetailsHeader: React.FC<ScanDetailsHeaderProps> = ({
           )}
           <span>{isSaved ? (isBn ? 'সংরক্ষিত' : 'Saved') : (isBn ? 'সংরক্ষণ' : 'Save')}</span>
         </button>
+
+        {onDownloadPdf && (
+          <button
+            onClick={onDownloadPdf}
+            disabled={isDownloadingPdf}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-sm active:scale-95 disabled:opacity-60"
+          >
+            <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>{isDownloadingPdf ? (isBn ? 'তৈরি হচ্ছে…' : 'Preparing…') : 'PDF'}</span>
+          </button>
+        )}
 
         {/* Check Again Primary Action */}
         <button

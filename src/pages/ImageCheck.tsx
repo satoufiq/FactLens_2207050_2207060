@@ -31,6 +31,10 @@ export const ImageCheck: React.FC = () => {
   // File & Workspace state
   const [fileState, setFileState] = useState<ImageCheckData | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  // The raw File is what Image Check actually analyzes. The metadata panel
+  // below is a preview built in the browser; the real EXIF, noise,
+  // compression and frequency analysis runs server-side on these bytes.
+  const [rawFile, setRawFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [validationState, setValidationState] = useState<'IDLE' | 'CHECKING' | 'READY' | 'ERROR_FORMAT' | 'ERROR_SIZE'>('IDLE');
   
@@ -61,6 +65,7 @@ export const ImageCheck: React.FC = () => {
 
     const objectUrl = URL.createObjectURL(file);
     setImagePreviewUrl(objectUrl);
+    setRawFile(file);
 
     // Create File Metadata
     const img = new Image();
@@ -102,6 +107,7 @@ export const ImageCheck: React.FC = () => {
   const handleResetImage = () => {
     setFileState(null);
     setImagePreviewUrl(null);
+    setRawFile(null);
     setValidationState('IDLE');
     setZoomLevel(1);
   };
@@ -109,7 +115,20 @@ export const ImageCheck: React.FC = () => {
   const handleAnalyze = () => {
     setIsAnalyzing(true);
     setTimeout(() => {
-      navigate('/app/image/processing');
+      navigate('/app/image/processing', {
+        state: {
+          fileData: fileState || {
+            name: 'uploaded-photo.png',
+            format: 'PNG',
+            size: '1.4 MB',
+            dimensions: '1200 x 800',
+          },
+          previewUrl: imagePreviewUrl,
+          // Without the File object the processing page has nothing to upload
+          // and falls back to the sample walkthrough.
+          rawFile,
+        }
+      });
     }, 600);
   };
 

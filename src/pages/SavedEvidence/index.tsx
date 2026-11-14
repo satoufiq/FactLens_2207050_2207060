@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { SystemStorage } from '@/services/storage';
 
-// Import Mock Data
-import {
-  savedEvidenceMockData,
-  initialCollectionsData,
-  type SavedEvidenceItem,
-  type CollectionItem
+// Types
+import type {
+  SavedEvidenceItem,
+  CollectionItem,
+  EvidenceRelationship
 } from '../../data/savedEvidenceMockData';
 
 // Import Subcomponents
@@ -35,11 +36,12 @@ export const SavedEvidence: React.FC = () => {
   const isBn = lang === 'bn';
   const { theme } = useTheme();
   const isLight = theme === 'light';
+  const { user } = useAuth();
 
   // State Management
   const [isLoading, setIsLoading] = useState(true);
-  const [evidenceList, setEvidenceList] = useState<SavedEvidenceItem[]>(savedEvidenceMockData);
-  const [collections, setCollections] = useState<CollectionItem[]>(initialCollectionsData);
+  const [evidenceList, setEvidenceList] = useState<SavedEvidenceItem[]>([]);
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,11 +66,46 @@ export const SavedEvidence: React.FC = () => {
   const [showCreateColModal, setShowCreateColModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Simulate initial loading
+  // Load real evidence from SystemStorage
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 350);
-    return () => clearTimeout(timer);
-  }, []);
+    setIsLoading(true);
+    const rawSaved = SystemStorage.getSavedEvidence();
+    const mapped: SavedEvidenceItem[] = rawSaved.map((e) => ({
+      id: e.id,
+      type: 'CLAIM_EVIDENCE',
+      title: e.title,
+      titleBn: e.title,
+      description: e.snippet,
+      descriptionBn: e.snippet,
+      relationship: (e.relationship as EvidenceRelationship) || 'SUPPORTING',
+      source: e.sourceName,
+      sourceType: e.sourceType,
+      scanId: e.scanId,
+      savedAt: new Date(e.savedAt).toLocaleDateString(),
+      timestampRaw: e.savedAt,
+      collection: e.collection || 'Official Gazettes',
+      url: e.url,
+      confidenceScore: e.relevanceScore,
+      fullExplanation: e.snippet,
+    }));
+    setEvidenceList(mapped);
+
+    const distinctCols = SystemStorage.getCollections();
+    const colsMapped: CollectionItem[] = distinctCols.map((cName, idx) => {
+      const cnt = mapped.filter((m) => m.collection === cName).length;
+      return {
+        id: `col-${idx + 1}`,
+        name: cName,
+        nameBn: cName,
+        count: cnt,
+        color: '#2563EB',
+        bgClass: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200/80 dark:border-blue-900/60',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400'
+      };
+    });
+    setCollections(colsMapped);
+    setIsLoading(false);
+  }, [user]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -76,6 +113,7 @@ export const SavedEvidence: React.FC = () => {
   };
 
   const handleToggleSave = (id: string) => {
+    SystemStorage.removeSavedEvidence(id);
     setEvidenceList((prev) => {
       const exists = prev.find((item) => item.id === id);
       if (exists) {
@@ -87,6 +125,7 @@ export const SavedEvidence: React.FC = () => {
   };
 
   const handleCreateCollection = (name: string) => {
+    SystemStorage.addCollection(name);
     const newCol: CollectionItem = {
       id: `col-${Date.now()}`,
       name,

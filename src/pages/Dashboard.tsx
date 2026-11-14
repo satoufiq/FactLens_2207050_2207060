@@ -1,29 +1,73 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, ShieldAlert, FileCheck2, ArrowRight, TrendingUp, ChevronRight, Clock } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
-import { useLanguage } from '@/context/LanguageContext';
-
-const chartData = [
-  { day: 'Mon', scans: 12 },
-  { day: 'Tue', scans: 19 },
-  { day: 'Wed', scans: 15 },
-  { day: 'Thu', scans: 26 },
-  { day: 'Fri', scans: 22 },
-  { day: 'Sat', scans: 33 },
-  { day: 'Sun', scans: 28 },
-];
+import { Search, ShieldAlert, FileCheck2, ArrowRight, TrendingUp, ChevronRight, Clock, Inbox } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { SystemStorage, type ScanRecord } from '@/services/storage';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
 
-  const recentScans = [
-    { id: '001', title: t('বিশ্ববিদ্যালয় ছুটির নোটিশের দাবি', 'University closure notice claim'), type: t('গুজব', 'Rumor'), color: '#00D2C2', result: t('অযাচাইকৃত', 'UNVERIFIED'), resultColor: '#F59E0B', time: t('১৮ মিনিট আগে', '18 min ago'), link: '/app/result/rumor/scan-001' },
-    { id: '002', title: t('বিকাশ ক্যাশব্যাক এসএমএস অফার', 'bKash cashback SMS offer'), type: t('স্ক্যাম', 'Scam'), color: '#F97316', result: t('উচ্চ ঝুঁকি', 'HIGH RISK'), resultColor: '#EF4444', time: t('১ ঘণ্টা আগে', '1 hr ago'), link: '/app/scam' },
-    { id: '003', title: t('সংবাদ সম্মেলন ছবি সম্পাদনা', 'Press conference photo edit'), type: t('ছবি', 'Image'), color: '#6366F1', result: t('সঠিক', 'AUTHENTIC'), resultColor: '#00E599', time: t('গতকাল', 'Yesterday'), link: '/app/result/deepfake/img-902' },
-    { id: '004', title: t('জ্বালানি তেলের দাম সমন্বয় সার্কুলার', 'Fuel price revision circular'), type: t('গুজব', 'Rumor'), color: '#00D2C2', result: t('সমর্থিত', 'SUPPORTED'), resultColor: '#00E599', time: t('গতকাল', 'Yesterday'), link: '/app/result/rumor/scan-001' },
-  ];
+  const [scans, setScans] = useState<ScanRecord[]>([]);
+
+  useEffect(() => {
+    const list = SystemStorage.getScans();
+    setScans(list);
+  }, [user]);
+
+  const displayName = user?.full_name || SystemStorage.getUserProfile().name || 'Shahriar Abdullah';
+
+  const totalScans = scans.length;
+  const rumorScans = scans.filter((s) => s.type === 'RUMOR').length;
+  const scamScans = scans.filter((s) => s.type === 'SCAM').length;
+  const imageScans = scans.filter((s) => s.type === 'IMAGE').length;
+
+  const rumorPct = totalScans > 0 ? Math.round((rumorScans / totalScans) * 100) : 0;
+  const scamPct = totalScans > 0 ? Math.round((scamScans / totalScans) * 100) : 0;
+  const imagePct = totalScans > 0 ? Math.round((imageScans / totalScans) * 100) : 0;
+
+  // Recent 4 scans
+  const recentList = scans.slice(0, 4);
+
+  // Dynamic 7-day activity based on scan timestamps
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const chartData = daysOfWeek.map((day, idx) => {
+    // Count scans matching day of week
+    const count = scans.filter((s) => {
+      const d = new Date(s.createdAt).getDay();
+      // Sunday is 0, Mon is 1
+      const mappedIdx = d === 0 ? 6 : d - 1;
+      return mappedIdx === idx;
+    }).length;
+    return { day, scans: count };
+  });
+
+  const getStatusColor = (res: string) => {
+    if (res === 'SUPPORTED' || res === 'AUTHENTIC' || res === 'LOW_RISK') return '#00E599';
+    if (res === 'CONTRADICTED' || res === 'HIGH_RISK' || res === 'LIKELY_AI_GENERATED') return '#EF4444';
+    return '#F59E0B';
+  };
+
+  const getTypeColor = (type: string) => {
+    if (type === 'RUMOR') return '#00D2C2';
+    if (type === 'SCAM') return '#F97316';
+    return '#6366F1';
+  };
+
+  const formatRelativeTime = (isoString: string) => {
+    try {
+      const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+      if (diff < 60) return t('এইমাত্র', 'Just now');
+      if (diff < 3600) return `${Math.floor(diff / 60)} ${t('মিনিট আগে', 'min ago')}`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)} ${t('ঘণ্টা আগে', 'hr ago')}`;
+      return `${Math.floor(diff / 86400)} ${t('দিন আগে', 'days ago')}`;
+    } catch {
+      return t('সম্প্রতি', 'Recently');
+    }
+  };
 
   const engines = [
     {
@@ -32,7 +76,7 @@ export default function Dashboard() {
       accentColor: '#00D2C2',
       tag: t('ইঞ্জিন ০১', 'ENGINE 01'),
       title: t('গুজব স্ক্যানার', 'Rumor Scanner'),
-      desc: t('সরকারি গেজেট, বিশ্ববিদ্যালয় নোটিশ ও প্রেস আর্কাইভের মাধ্যমে তথ্য যাচাই করুন।', 'Verify claims against Ministry gazettes, university notices, and press archives using BangaBERT NLP.'),
+      desc: t('সরকারি গেজেট, বিশ্ববিদ্যালয় নোটিশ ও প্রেস আর্কাইভের মাধ্যমে তথ্য যাচাই করুন।', 'Verify claims against Ministry gazettes, university notices, and press archives using BanglaBERT NLP.'),
       btnLabel: t('স্ক্যানার চালু করুন', 'Launch Scanner'),
       btnBg: '#00E599',
       btnText: '#040A07',
@@ -90,21 +134,21 @@ export default function Dashboard() {
                 </span>
               </div>
               <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.2 }}>
-                {t('স্বাগতম, ', 'Welcome back, ')}<span style={{ color: '#00E599' }}>{t('তানভীর', 'Tanvir')}</span>.
+                {t('স্বাগতম, ', 'Welcome back, ')}<span style={{ color: '#00E599' }}>{displayName}</span>.
               </h1>
               <p style={{ fontSize: 14, color: '#8E9E97', marginTop: 8, maxWidth: 480 }}>
-                {t('রিয়েল-টাইম তথ্য প্রমাণ স্ক্যান শুরু করতে একটি ফাইল নির্বাচন করুন বা নিচে আপনার টেক্সট পেস্ট করুন।', 'Select a verification engine or paste your text below to begin a real-time evidence scan.')}
+                {t('রিয়েল-টাইম তথ্য প্রমাণ স্ক্যান শুরু করতে একটি ইঞ্জিন নির্বাচন করুন বা সরাসরি ইনপুট দিন।', 'Select a verification engine below to begin inspecting digital media or claims.')}
               </p>
             </div>
 
-            {/* Stats pills */}
+            {/* Dynamic System Stats pills */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {[
-                { val: '99.4%', label: t('ওসিআর নির্ভুলতা', 'OCR Accuracy') },
-                { val: '< 2s', label: t('গড় গতি', 'Avg. Speed') },
-                { val: '48', label: t('মিডিয়া উৎস', 'Media Sources') },
+                { val: `${totalScans}`, label: t('মোট স্ক্যান', 'Total Scans') },
+                { val: `${rumorScans}`, label: t('গুজব পরীক্ষা', 'Rumor Scans') },
+                { val: `${scamScans + imageScans}`, label: t('স্ক্যাম ও ছবি', 'Scam & Media') },
               ].map((s, i) => (
-                <div key={i} style={{ background: '#060A09', border: '1px solid #1B2923', borderRadius: 14, padding: '12px 18px', textAlign: 'center', minWidth: 80 }}>
+                <div key={i} style={{ background: '#060A09', border: '1px solid #1B2923', borderRadius: 14, padding: '12px 18px', textAlign: 'center', minWidth: 90 }}>
                   <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: 'monospace' }}>{s.val}</div>
                   <div style={{ fontSize: 10, color: '#8E9E97', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{s.label}</div>
                 </div>
@@ -197,7 +241,7 @@ export default function Dashboard() {
         transition={{ duration: 0.4, delay: 0.16 }}
         style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}
       >
-        {/* Recent Scans */}
+        {/* Dynamic Recent Scans */}
         <div style={{ background: '#0F1714', border: '1px solid #1B2923', borderRadius: 18, overflow: 'hidden' }}>
           <div style={{ padding: '18px 24px', borderBottom: '1px solid #1B2923', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -213,41 +257,58 @@ export default function Dashboard() {
           </div>
 
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {recentScans.map((scan) => (
-              <motion.div
-                key={scan.id}
-                onClick={() => navigate(scan.link)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 14px',
-                  background: '#060A09',
-                  border: '1px solid #1B2923',
-                  borderRadius: 12,
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s, background 0.2s',
-                }}
-              >
-                <div style={{ width: 3, height: 36, borderRadius: 4, background: scan.color, flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: scan.color, fontFamily: 'monospace', textTransform: 'uppercase' }}>{scan.type}</span>
-                    <span style={{ fontSize: 10, color: '#5A6E64', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Clock size={9} /> {scan.time}
+            {recentList.length === 0 ? (
+              <div style={{ padding: '36px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <Inbox size={32} style={{ color: '#5A6E64' }} />
+                <span style={{ fontSize: 13, color: '#8E9E97', fontWeight: 600 }}>{t('কোনো স্ক্যান এখনও রেকর্ড করা হয়নি', 'No scans recorded yet.')}</span>
+                <p style={{ fontSize: 11, color: '#5A6E64', margin: 0 }}>
+                  {t('উপরের ইঞ্জিনগুলো ব্যবহার করে আপনার প্রথম তথ্য যাচাই করুন।', 'Run a verification scan from any module above to start your audit trail.')}
+                </p>
+              </div>
+            ) : (
+              recentList.map((scan) => {
+                const color = getTypeColor(scan.type);
+                const resColor = getStatusColor(scan.result);
+                const link = scan.type === 'RUMOR' ? `/app/history/${scan.id}` : `/app/history/${scan.id}`;
+                return (
+                  <motion.div
+                    key={scan.id}
+                    onClick={() => navigate(link)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 14px',
+                      background: '#060A09',
+                      border: '1px solid #1B2923',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s, background 0.2s',
+                    }}
+                  >
+                    <div style={{ width: 3, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: color, fontFamily: 'monospace', textTransform: 'uppercase' }}>{scan.type}</span>
+                        <span style={{ fontSize: 10, color: '#5A6E64', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Clock size={9} /> {formatRelativeTime(scan.createdAt)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8E5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {scan.title}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: resColor, background: resColor + '18', border: `1px solid ${resColor}35`, borderRadius: 20, padding: '3px 10px', fontFamily: 'monospace', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                      {scan.result}
                     </span>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#E2E8E5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{scan.title}</div>
-                </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: scan.resultColor, background: scan.resultColor + '18', border: `1px solid ${scan.resultColor}35`, borderRadius: 20, padding: '3px 10px', fontFamily: 'monospace', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  {scan.result}
-                </span>
-              </motion.div>
-            ))}
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         </div>
 
-        {/* Chart Panel */}
+        {/* Dynamic Telemetry Chart Panel */}
         <div style={{ background: '#0F1714', border: '1px solid #1B2923', borderRadius: 18, padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
@@ -257,31 +318,48 @@ export default function Dashboard() {
             <TrendingUp size={16} color="#00E599" />
           </div>
 
-          <div style={{ height: 140 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <defs>
-                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00E599" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00E599" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#6A7E75' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#6A7E75' }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#060A09', border: '1px solid #00E599', borderRadius: 10, fontSize: 11 }}
-                />
-                <Area type="monotone" dataKey="scans" stroke="#00E599" strokeWidth={2} fill="url(#areaGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
+          {/* Native High-Performance Telemetry Chart */}
+          <div style={{ height: 130, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <svg viewBox="0 0 280 85" style={{ width: '100%', height: 85, overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#00E599" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#00E599" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              {(() => {
+                const maxVal = Math.max(1, ...chartData.map(d => d.scans));
+                const points = chartData.map((d, i) => {
+                  const x = 15 + i * (250 / 6);
+                  const y = 75 - (d.scans / maxVal) * 60;
+                  return { x, y, scans: d.scans };
+                });
+                const dPath = points.reduce((acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`), '');
+                const areaPath = `${dPath} L ${points[points.length - 1].x} 80 L ${points[0].x} 80 Z`;
+                return (
+                  <>
+                    <path d={areaPath} fill="url(#areaGrad)" />
+                    <path d={dPath} fill="none" stroke="#00E599" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    {points.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r={p.scans > 0 ? 3.5 : 2} fill="#00E599" stroke="#060A09" strokeWidth="1.5" />
+                    ))}
+                  </>
+                );
+              })()}
+            </svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 8px', marginTop: 4 }}>
+              {chartData.map(d => (
+                <span key={d.day} style={{ fontSize: 9.5, color: '#6A7E75', fontFamily: 'monospace' }}>{d.day}</span>
+              ))}
+            </div>
           </div>
 
-          {/* Module breakdown */}
+          {/* Dynamic Module breakdown */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { label: t('গুজব', 'Rumor'), pct: 58, color: '#00D2C2' },
-              { label: t('স্ক্যাম', 'Scam'), pct: 29, color: '#F97316' },
-              { label: t('ছবি', 'Image'), pct: 13, color: '#6366F1' },
+              { label: t('গুজব', 'Rumor'), pct: rumorPct, color: '#00D2C2' },
+              { label: t('স্ক্যাম', 'Scam'), pct: scamPct, color: '#F97316' },
+              { label: t('ছবি', 'Image'), pct: imagePct, color: '#6366F1' },
             ].map((m) => (
               <div key={m.label}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8E9E97', marginBottom: 4 }}>
@@ -301,8 +379,8 @@ export default function Dashboard() {
           </div>
 
           <div style={{ paddingTop: 12, borderTop: '1px solid #1B2923', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
-            <span style={{ color: '#8E9E97' }}>{t('সাপ্তাহিক মোট', 'Weekly Total')}</span>
-            <span style={{ color: '#00E599', fontWeight: 800, fontFamily: 'monospace' }}>{t('১৩৩ স্ক্যান', '133 scans')}</span>
+            <span style={{ color: '#8E9E97' }}>{t('সর্বমোট স্ক্যান', 'Total Scans')}</span>
+            <span style={{ color: '#00E599', fontWeight: 800, fontFamily: 'monospace' }}>{totalScans}</span>
           </div>
         </div>
       </motion.div>

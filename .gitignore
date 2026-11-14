@@ -22,3 +22,44 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# --- Model weights and training data -----------------------------------------
+# Weights are hundreds of MB and are distributed outside git. The manifest
+# (models/registry.json) IS tracked: it is the record of what the system serves.
+models/**
+!models/registry.json
+*.onnx
+*.safetensors
+training/data/
+training/artifacts/
+
+# --- Runtime state -----------------------------------------------------------
+services/*/var/
+services/*/*.db
+services/*/factlens_*.db
+
+# Model live-check output
+scamnet_check_report.txt
+banglaverify_check_report.txt
+
+# Evaluation datasets (licences vary; kept out of git)
+data/
+
+# ScamNet evaluation outputs
+evaluation/
+scamnet_eval_report.txt
+
+# --- Python caches -------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# --- Local secrets and runtime uploads ---------------------------------------
+.env
+services/identity-service/media/
+celerybeat-schedule*
+
+# --- OCR language data and Office lock files ---------------------------------
+*.traineddata
+~$*

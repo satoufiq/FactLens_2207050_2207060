@@ -32,13 +32,13 @@ const ARCHITECTURE_MODULES = [
   {
     id: 'nlp-core',
     tag: 'LAYER 02',
-    title: 'BangaBERT Neural Stance Core',
+    title: 'BanglaBERT Neural Stance Core',
     titleBn: 'নিউরাল ল্যাঙ্গুয়েজ স্ট্যান্স ইঞ্জিন',
     icon: <Cpu size={22} style={{ color: '#00D2C2' }} />,
     color: '#00D2C2',
     summary: 'Transformer NLP model calculating semantic agreement between input claims and gazette archives.',
     specs: [
-      { name: 'Model Architecture', val: 'BangaBERT-Base-V2' },
+      { name: 'Model Architecture', val: 'BanglaBERT-Electra-Base' },
       { name: 'Context Length', val: '512 Tokens' },
       { name: 'Fine-Tuned On', val: '120k BD News Sentences' },
       { name: 'Stance Classes', val: 'Agree, Disagree, Unrelated' },
@@ -275,7 +275,7 @@ export default function Architecture() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
           {[
             { stage: '1. Ingestion', latency: '< 50ms', desc: 'Text, image file, or URL ingestion' },
-            { stage: '2. Tokenization', latency: '< 120ms', desc: 'BangaBERT Bengali text parsing' },
+            { stage: '2. Tokenization', latency: '< 120ms', desc: 'BanglaBERT Bengali text parsing' },
             { stage: '3. Vector RAG Search', latency: '< 180ms', desc: 'HNSW Cosine search on 48k Gazettes' },
             { stage: '4. Forensic Inspection', latency: '< 450ms', desc: 'ELA pixel noise & EXIF analysis' },
             { stage: '5. XAI Synthesis', latency: '< 200ms', desc: 'Bengali explanation & audit PDF links' },
